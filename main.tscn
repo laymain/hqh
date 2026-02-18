@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://ckfgtbd0vhb4s"]
+
+[ext_resource type="Script" uid="uid://dc6bji7b4l1vu" path="res://scripts/map/map_manager.gd" id="1_0xm2m"]
+[ext_resource type="MeshLibrary" uid="uid://cpbthfekylqht" path="res://dungeon_ml.meshlib" id="1_ig7tw"]
+[ext_resource type="Script" uid="uid://bdkhoi3jstcbw" path="res://scripts/environment.gd" id="4_1bvp3"]
+[ext_resource type="PackedScene" uid="uid://bgx4pad1yns73" path="res://scenes/character/player.tscn" id="5_lquwl"]
+[ext_resource type="PackedScene" uid="uid://cy6herarer5up" path="res://scenes/character/enemy.tscn" id="6_7mycd"]
+
+[node name="Main" type="Node3D" unique_id=150515328]
+
+[node name="Environment" type="Node" parent="." unique_id=216227157]
+script = ExtResource("4_1bvp3")
+
+[node name="MapManager" type="Node" parent="." unique_id=1026537415 node_paths=PackedStringArray("camera")]
+script = ExtResource("1_0xm2m")
+cell_size = Vector3(4, 4, 4)
+mesh_library = ExtResource("1_ig7tw")
+player_prefab = ExtResource("5_lquwl")
+enemy_prefab = ExtResource("6_7mycd")
+camera = NodePath("")

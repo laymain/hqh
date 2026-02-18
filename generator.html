@@ -1,0 +1,1982 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Dungeon Map Generator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+:root{
+  --bg:#0f1115;
+  --panel:#171a21;
+  --accent:#4da3ff;
+  --muted:#666;
+  --text:#e6e6e6;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,system-ui,Segoe UI,Arial;
+  background:var(--bg);
+  color:var(--text);
+  overflow:hidden;
+}
+
+#canvas{
+  position:absolute;
+  inset:0;
+  background:#0f1115;
+}
+
+.toolbar{
+  position:absolute;
+  top:12px;
+  left:12px;
+  background:var(--panel);
+  padding:8px 10px;
+  border-radius:8px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  font-size:13px;
+}
+
+.toolbar button{
+  background:#222;
+  border:1px solid #2a2f3a;
+  color:var(--text);
+  padding:4px 8px;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:12px;
+}
+.toolbar button:hover{ border-color:var(--accent); }
+.toolbar button.active{
+  border-color:var(--accent);
+  background:#1e2938;
+}
+.toolbar select{
+  background:#222;
+  border:1px solid #2a2f3a;
+  color:var(--text);
+  padding:4px 6px;
+  border-radius:6px;
+  font-size:12px;
+}
+
+.status{
+  position:absolute;
+  bottom:12px;
+  left:12px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+pre{
+  position:absolute;
+  right:12px;
+  top:12px;
+  width:320px;
+  max-height:60vh;
+  overflow:auto;
+  background:var(--panel);
+  padding:10px;
+  border-radius:8px;
+  font-size:11px;
+}
+
+.marker-panel{
+  position:absolute;
+  right:12px;
+  bottom:40px;
+  width:320px;
+  max-height:34vh;
+  overflow:auto;
+  background:var(--panel);
+  padding:10px;
+  border-radius:8px;
+  font-size:12px;
+}
+.marker-panel h4{
+  margin:0 0 8px;
+  font-size:12px;
+}
+.marker-details .field{
+  margin-bottom:8px;
+}
+.marker-details .label{
+  display:block;
+  color:var(--muted);
+  margin-bottom:2px;
+}
+.enemy-row{
+  display:grid;
+  grid-template-columns: 1fr 52px 52px 24px;
+  gap:6px;
+  margin-bottom:6px;
+}
+.marker-panel input,.marker-panel button,.marker-panel select{
+  background:#222;
+  border:1px solid #2a2f3a;
+  color:var(--text);
+  padding:4px 6px;
+  border-radius:6px;
+  font-size:12px;
+}
+.marker-panel button{
+  cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div class="toolbar">
+  <button id="exportBtn">Export</button>
+  <button id="importBtn">Import</button>
+  <button id="markerModeBtn">Marker Mode</button>
+  <select id="markerType">
+    <option value="START">START</option>
+    <option value="ENCOUNTER">ENCOUNTER</option>
+    <option value="BOSS">BOSS</option>
+  </select>
+</div>
+
+<div class="status" id="status">Ready</div>
+<pre id="jsonView"></pre>
+<div class="marker-panel">
+  <h4>Marker</h4>
+  <div id="markerDetails" class="marker-details">No marker selected.</div>
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const statusEl = document.getElementById("status");
+const jsonView = document.getElementById("jsonView");
+const markerModeBtn = document.getElementById("markerModeBtn");
+const markerTypeSelect = document.getElementById("markerType");
+const markerDetailsEl = document.getElementById("markerDetails");
+
+let scale = 1;
+let offsetX = 0;
+let offsetY = 0;
+let tile = 32;
+
+let isDragging = false;
+let hasDragged = false;
+let isPanning = false;
+let spaceHeld = false;
+let isMoving = false;
+let isResizing = false;
+let isMovingMarker = false;
+let isFacingMarker = false;
+
+let startTile = null;
+let previewRoom = null;
+let moveStartTile = null;
+let moveRoomStart = null;
+let moveMarkerStartTile = null;
+let moveMarkerStart = null;
+let facingDragStartPixel = null;
+let facingDragStartFacing = "N";
+let resizeStartTile = null;
+let resizeRoomStart = null;
+let resizeEdges = null;
+
+let selected = null;
+let selectedCorridor = null;
+let selectedMarker = null;
+let connectMode = false;
+let connectStage = 0;
+let connectRoomAId = null;
+let connectRoomBId = null;
+let connectAnchorA = null;
+let markerMode = false;
+let markerType = "START";
+let nextRoomId = 1;
+
+const WARM_LIGHT_PALETTE = [
+  "#ffd166",
+  "#ffbe6b",
+  "#ff9f68",
+  "#ffb347",
+  "#ffc857",
+  "#ffad5a",
+  "#ffcc73",
+  "#ff9a5a"
+];
+
+let dungeon = safeDungeon({});
+
+/* ================= SAFE MODEL ================= */
+
+function safeDungeon(data){
+  const roomsIn = Array.isArray(data?.rooms) ? data.rooms : [];
+  const lightsIn = Array.isArray(data?.lights) ? data.lights : [];
+  const corridorsIn = Array.isArray(data?.corridors) ? data.corridors : [];
+  const markersIn = Array.isArray(data?.markers) ? data.markers : [];
+  const rooms = [];
+  const usedIds = new Set();
+  let maxRoomId = 0;
+
+  roomsIn.forEach((room, index) => {
+    if(!room || typeof room !== "object") return;
+
+    let id = Number.isInteger(room.id) && room.id > 0 ? room.id : index + 1;
+    while(usedIds.has(id)) id += 1;
+    usedIds.add(id);
+    maxRoomId = Math.max(maxRoomId, id);
+
+    rooms.push({
+      ...room,
+      id
+    });
+  });
+
+  nextRoomId = maxRoomId + 1;
+
+  const roomById = new Map(rooms.map(room => [room.id, room]));
+  const lights = [];
+
+  lightsIn.forEach((light, index) => {
+    if(Array.isArray(light)){
+      const [x, y, color, intensity, radius] = light;
+      if(!Number.isFinite(x) || !Number.isFinite(y)) return;
+      let roomId = null;
+      const roomIndex = rooms.findIndex(room =>
+        x >= room.x && x < room.x + room.w &&
+        y >= room.y && y < room.y + room.h
+      );
+      if(roomIndex !== -1) roomId = rooms[roomIndex].id;
+      lights.push({
+        roomId,
+        x,
+        y,
+        color: typeof color === "string" ? color : randomWarmLightColor(),
+        intensity: Number.isFinite(intensity) ? intensity : 0.4,
+        radius: Number.isFinite(radius) ? radius : 12
+      });
+      return;
+    }
+
+    if(!light || typeof light !== "object") return;
+    let roomId = Number.isInteger(light.roomId) ? light.roomId : null;
+    if(roomId === null && rooms[index]) roomId = rooms[index].id;
+    if(!Number.isFinite(light.x) || !Number.isFinite(light.y)) return;
+
+    lights.push({
+      ...light,
+      roomId: roomId !== null && roomById.has(roomId) ? roomId : null,
+      color: typeof light.color === "string" ? light.color : randomWarmLightColor(),
+      intensity: Number.isFinite(light.intensity) ? light.intensity : 0.4,
+      radius: Number.isFinite(light.radius) ? light.radius : 12
+    });
+  });
+
+  const corridors = corridorsIn.map(c => {
+    if(!c || typeof c !== "object") return null;
+    return {
+      id: Number.isInteger(c.id) ? c.id : null,
+      roomAId: Number.isInteger(c.roomAId) ? c.roomAId : null,
+      roomBId: Number.isInteger(c.roomBId) ? c.roomBId : null,
+      anchorA: c.anchorA || null,
+      anchorB: c.anchorB || null,
+      tiles: Array.isArray(c.tiles) ? c.tiles : [],
+      preserveTiles: c.preserveTiles === true
+    };
+  }).filter(Boolean);
+
+  const normalizeEnemy = (enemy, fallbackType) => {
+    if(!enemy || typeof enemy !== "object") enemy = {};
+    const type = typeof enemy.type === "string" && enemy.type.trim() ? enemy.type.trim() : fallbackType;
+    const dx = Number.isFinite(enemy.dx) ? Math.round(enemy.dx) : 0;
+    const dy = Number.isFinite(enemy.dy) ? Math.round(enemy.dy) : 0;
+    return { type, dx, dy };
+  };
+  const normalizeFacing = (facing) => {
+    const v = typeof facing === "string" ? facing.trim().toUpperCase() : "";
+    return v === "N" || v === "E" || v === "S" || v === "W" ? v : "N";
+  };
+
+  const markers = markersIn.map(marker => {
+    if(!marker || typeof marker !== "object") return null;
+    const rawType = typeof marker.type === "string" ? marker.type.trim().toUpperCase() : "";
+    if(rawType !== "START" && rawType !== "ENCOUNTER" && rawType !== "BOSS") return null;
+    if(!Number.isFinite(marker.x) || !Number.isFinite(marker.y)) return null;
+    const x = Math.round(marker.x);
+    const y = Math.round(marker.y);
+
+    const facing = normalizeFacing(marker.facing);
+    if(rawType === "START") return { x, y, type: "START", facing };
+
+    if(rawType === "ENCOUNTER"){
+      const enemiesIn = Array.isArray(marker.enemies) ? marker.enemies : [];
+      const enemies = enemiesIn.map(enemy => normalizeEnemy(enemy, "skeleton_soldier"));
+      if(enemies.length === 0) enemies.push({ type: "skeleton_soldier", dx: 0, dy: 0 });
+      return { x, y, type: "ENCOUNTER", facing, enemies };
+    }
+
+    const enemy = normalizeEnemy(marker.enemy, "director_mortis");
+    return { x, y, type: "BOSS", facing, enemy };
+  }).filter(Boolean);
+
+  return {
+    size: data?.size || { width: 200, height: 200 },
+    rooms,
+    corridors,
+    lights,
+    markers
+  };
+}
+
+function getRoomById(roomId){
+  return dungeon.rooms.find(room => room.id === roomId) || null;
+}
+
+function normalizeImportedData(parsed){
+  if(parsed && typeof parsed === "object" && Array.isArray(parsed.layers)){
+    return fromTileFormat(parsed);
+  }
+  return safeDungeon(parsed || {});
+}
+
+function fromTileFormat(data){
+  const width = Number.isInteger(data?.size?.width) ? data.size.width : 30;
+  const height = Number.isInteger(data?.size?.height) ? data.size.height : 30;
+
+  const rooms = Array.isArray(data?.rooms)
+    ? data.rooms.map((r, idx) => {
+      if(Array.isArray(r)){
+        const [, x, y, w, h] = r;
+        return { id: idx + 1, x, y, w, h };
+      }
+      if(r && typeof r === "object"){
+        return {
+          ...r,
+          id: Number.isInteger(r.id) && r.id > 0 ? r.id : idx + 1
+        };
+      }
+      return null;
+    }).filter(r => r && Number.isFinite(r.x) && Number.isFinite(r.y) && Number.isFinite(r.w) && Number.isFinite(r.h))
+    : inferRoomsFromLayers(data?.layers);
+
+  const normalized = safeDungeon({
+    size: { width, height },
+    rooms,
+    corridors: inferCorridorsFromLayers(data?.layers, rooms),
+    lights: Array.isArray(data?.lights) ? data.lights : [],
+    markers: Array.isArray(data?.markers) ? data.markers : []
+  });
+  return normalized;
+}
+
+function inferRoomsFromLayers(layers){
+  const geo = Array.isArray(layers) && Array.isArray(layers[1]) ? layers[1] : [];
+  const rooms = [];
+  let id = 1;
+
+  for(let y = 0; y < geo.length; y++){
+    const row = geo[y];
+    if(!Array.isArray(row)) continue;
+    for(let x = 0; x < row.length; x++){
+      if(row[x] !== "C0") continue;
+      let found = false;
+      for(let x2 = x + 2; x2 < row.length; x2++){
+        if(row[x2] !== "C1") continue;
+        for(let y2 = y + 2; y2 < geo.length; y2++){
+          const rBottom = geo[y2];
+          if(!Array.isArray(rBottom)) continue;
+          if(rBottom[x] !== "C3" || rBottom[x2] !== "C2") continue;
+
+          rooms.push({ id: id++, x, y, w: x2 - x + 1, h: y2 - y + 1 });
+          x = x2;
+          found = true;
+          break;
+        }
+        if(found) break;
+      }
+    }
+  }
+  return rooms;
+}
+
+/* ================= CANVAS ================= */
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  render();
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ================= UTIL ================= */
+
+function toTile(px, py){
+  return {
+    x: Math.floor((px - offsetX) / (tile * scale)),
+    y: Math.floor((py - offsetY) / (tile * scale))
+  };
+}
+
+function toPixel(x, y){
+  return {
+    x: x * tile * scale + offsetX,
+    y: y * tile * scale + offsetY
+  };
+}
+
+function findRoom(x,y){
+  return dungeon.rooms.findIndex(r =>
+    x >= r.x && x < r.x + r.w &&
+    y >= r.y && y < r.y + r.h
+  );
+}
+
+function status(msg){
+  if(statusEl) statusEl.textContent = msg;
+}
+
+function markerAtTile(x, y){
+  return dungeon.markers.findIndex(m => m.x === x && m.y === y);
+}
+
+function defaultMarker(type, x, y){
+  if(type === "ENCOUNTER"){
+    return {
+      x, y, type, facing: "N",
+      enemies: [{ type: "skeleton_soldier", dx: 0, dy: 0 }]
+    };
+  }
+  if(type === "BOSS"){
+    return {
+      x, y, type, facing: "N",
+      enemy: { type: "director_mortis", dx: 0, dy: 0 }
+    };
+  }
+  return { x, y, type: "START", facing: "N" };
+}
+
+function toggleMarkerMode(on){
+  markerMode = on;
+  if(markerMode){
+    resetConnectState();
+    status(`Marker mode: ${markerType}`);
+  } else {
+    status("Marker mode off");
+  }
+  markerModeBtn.classList.toggle("active", markerMode);
+}
+
+function placeMarkerAt(t){
+  const existing = markerAtTile(t.x, t.y);
+  if(existing !== -1 && dungeon.markers[existing].type === markerType){
+    selectedMarker = existing;
+    selected = null;
+    selectedCorridor = null;
+    return;
+  }
+
+  if(markerType === "START"){
+    const idx = dungeon.markers.findIndex(m => m.type === markerType);
+    if(idx !== -1){
+      dungeon.markers[idx].x = t.x;
+      dungeon.markers[idx].y = t.y;
+      selectedMarker = idx;
+      selected = null;
+      selectedCorridor = null;
+      return;
+    }
+  }
+
+  const marker = defaultMarker(markerType, t.x, t.y);
+  dungeon.markers.push(marker);
+  selectedMarker = dungeon.markers.length - 1;
+  selected = null;
+  selectedCorridor = null;
+}
+
+function markerFill(type){
+  if(type === "START") return "#57d38c";
+  if(type === "BOSS") return "#ff6d6d";
+  return "#ffbf69";
+}
+
+function markerFacingVector(facing){
+  if(facing === "E") return { x: 1, y: 0 };
+  if(facing === "S") return { x: 0, y: 1 };
+  if(facing === "W") return { x: -1, y: 0 };
+  return { x: 0, y: -1 };
+}
+
+function facingFromDrag(dx, dy, fallback){
+  const deadZone = 8;
+  if(Math.abs(dx) < deadZone && Math.abs(dy) < deadZone) return fallback;
+  if(Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? "E" : "W";
+  return dy >= 0 ? "S" : "N";
+}
+
+function drawMarkerSymbol(marker, isSelected){
+  const p = toPixel(marker.x, marker.y);
+  const cx = p.x + (tile * scale) / 2;
+  const cy = p.y + (tile * scale) / 2;
+  const r = Math.max(6, tile * scale * 0.25);
+
+  ctx.fillStyle = markerFill(marker.type);
+  ctx.strokeStyle = "#0f1115";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  if(marker.type === "START"){
+    ctx.moveTo(cx, cy - r);
+    ctx.lineTo(cx - r * 0.9, cy + r * 0.7);
+    ctx.lineTo(cx + r * 0.9, cy + r * 0.7);
+  } else if(marker.type === "BOSS"){
+    for(let i = 0; i < 6; i++){
+      const a = (Math.PI / 3) * i - Math.PI / 2;
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      if(i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+  } else {
+    ctx.moveTo(cx, cy - r);
+    ctx.lineTo(cx - r, cy);
+    ctx.lineTo(cx, cy + r);
+    ctx.lineTo(cx + r, cy);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  const f = markerFacingVector(marker.facing || "N");
+  const ax = cx + f.x * (r * 1.1);
+  const ay = cy + f.y * (r * 1.1);
+  const bx = cx + f.x * (r * 0.25);
+  const by = cy + f.y * (r * 0.25);
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(bx, by);
+  ctx.lineTo(ax, ay);
+  ctx.stroke();
+
+  if(isSelected){
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function escapeHtml(text){
+  return String(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function renderMarkerInspector(){
+  if(selectedMarker === null || !dungeon.markers[selectedMarker]){
+    markerDetailsEl.innerHTML = "No marker selected.";
+    return;
+  }
+  const marker = dungeon.markers[selectedMarker];
+  const head = `<div class="field"><span class="label">Type</span>${marker.type} @ (${marker.x}, ${marker.y})</div>
+    <div class="field"><span class="label">Facing</span>
+      <select data-action="marker-facing">
+        <option value="N"${marker.facing==="N" ? " selected" : ""}>N</option>
+        <option value="E"${marker.facing==="E" ? " selected" : ""}>E</option>
+        <option value="S"${marker.facing==="S" ? " selected" : ""}>S</option>
+        <option value="W"${marker.facing==="W" ? " selected" : ""}>W</option>
+      </select>
+    </div>`;
+
+  if(marker.type === "START"){
+    markerDetailsEl.innerHTML = `${head}<div class="field">No extra fields.</div>`;
+    return;
+  }
+
+  if(marker.type === "BOSS"){
+    const enemy = marker.enemy || { type: "director_mortis", dx: 0, dy: 0 };
+    markerDetailsEl.innerHTML = `${head}
+      <div class="field"><span class="label">Boss Enemy</span>
+        <div class="enemy-row">
+          <input data-action="boss-type" value="${escapeHtml(enemy.type)}" />
+          <input data-action="boss-dx" type="number" value="${enemy.dx}" />
+          <input data-action="boss-dy" type="number" value="${enemy.dy}" />
+          <span></span>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const rows = marker.enemies.map((enemy, i) => `
+    <div class="enemy-row">
+      <input data-action="enemy-type" data-i="${i}" value="${escapeHtml(enemy.type)}" />
+      <input data-action="enemy-dx" data-i="${i}" type="number" value="${enemy.dx}" />
+      <input data-action="enemy-dy" data-i="${i}" type="number" value="${enemy.dy}" />
+      <button data-action="enemy-remove" data-i="${i}" title="Remove">-</button>
+    </div>
+  `).join("");
+
+  markerDetailsEl.innerHTML = `${head}
+    <div class="field"><span class="label">Enemies</span>${rows}</div>
+    <button data-action="enemy-add">Add Enemy</button>`;
+}
+
+function newRoomId(){
+  const id = nextRoomId;
+  nextRoomId += 1;
+  return id;
+}
+
+function randomWarmLightColor(){
+  if(WARM_LIGHT_PALETTE.length === 0) return "#ffd966";
+  const i = Math.floor(Math.random() * WARM_LIGHT_PALETTE.length);
+  return WARM_LIGHT_PALETTE[i];
+}
+
+function getRoomCenter(room){
+  return {
+    x: room.x + (room.w - 1) / 2,
+    y: room.y + (room.h - 1) / 2
+  };
+}
+
+function getResizeEdges(room, t){
+  const left = t.x === room.x;
+  const right = t.x === room.x + room.w - 1;
+  const top = t.y === room.y;
+  const bottom = t.y === room.y + room.h - 1;
+  if(!left && !right && !top && !bottom) return null;
+  return { left, right, top, bottom };
+}
+
+function updateRoomLights(room){
+  const center = getRoomCenter(room);
+  dungeon.lights.forEach(light => {
+    if(light.roomId === room.id){
+      light.x = center.x;
+      light.y = center.y;
+    }
+  });
+}
+
+function isThinRoom(room){
+  return room.w === 1 || room.h === 1;
+}
+
+function tilesFromThinRoom(room){
+  const tiles = [];
+  for(let y = room.y; y < room.y + room.h; y++){
+    for(let x = room.x; x < room.x + room.w; x++){
+      tiles.push({ x, y });
+    }
+  }
+  return tiles;
+}
+
+function addStandaloneCorridor(tiles){
+  const corridor = {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    tiles: Array.isArray(tiles) ? tiles : []
+  };
+  dungeon.corridors.push(corridor);
+  selectedCorridor = dungeon.corridors.length - 1;
+}
+
+function removeRoomLinks(roomId){
+  dungeon.lights = dungeon.lights.filter(light => light.roomId !== roomId);
+  dungeon.corridors = dungeon.corridors.filter(c =>
+    c.roomAId !== roomId && c.roomBId !== roomId
+  );
+}
+
+function convertThinRoomToCorridor(roomId){
+  const roomIndex = dungeon.rooms.findIndex(room => room.id === roomId);
+  if(roomIndex === -1) return false;
+
+  const room = dungeon.rooms[roomIndex];
+  if(!isThinRoom(room)) return false;
+
+  const tiles = tilesFromThinRoom(room);
+  dungeon.rooms.splice(roomIndex, 1);
+  removeRoomLinks(room.id);
+  addStandaloneCorridor(tiles);
+
+  if(connectRoomAId === room.id || connectRoomBId === room.id){
+    resetConnectState();
+  }
+
+  selected = null;
+  return true;
+}
+
+function getAnchorFromWallTile(room, t){
+  const onN = t.y === room.y;
+  const onS = t.y === room.y + room.h - 1;
+  const onW = t.x === room.x;
+  const onE = t.x === room.x + room.w - 1;
+  if(!onN && !onS && !onW && !onE) return null;
+  const corner = (onN || onS) && (onW || onE);
+  if(corner) return null;
+
+  if(onN) return { side: "N", offset: t.x - room.x };
+  if(onS) return { side: "S", offset: t.x - room.x };
+  if(onW) return { side: "W", offset: t.y - room.y };
+  return { side: "E", offset: t.y - room.y };
+}
+
+function clampAnchor(room, anchor){
+  if(!room || !anchor) return null;
+
+  if(anchor.side === "N" || anchor.side === "S"){
+    if(room.w < 3) return null;
+    const min = 1;
+    const max = room.w - 2;
+    return { side: anchor.side, offset: Math.max(min, Math.min(max, anchor.offset)) };
+  }
+
+  if(room.h < 3) return null;
+  const min = 1;
+  const max = room.h - 2;
+  return { side: anchor.side, offset: Math.max(min, Math.min(max, anchor.offset)) };
+}
+
+function anchorTile(room, anchor){
+  if(!room || !anchor) return null;
+  const clamped = clampAnchor(room, anchor);
+  if(!clamped) return null;
+  if(clamped.side === "N") return { x: room.x + clamped.offset, y: room.y };
+  if(clamped.side === "S") return { x: room.x + clamped.offset, y: room.y + room.h - 1 };
+  if(clamped.side === "W") return { x: room.x, y: room.y + clamped.offset };
+  return { x: room.x + room.w - 1, y: room.y + clamped.offset };
+}
+
+function corridorEntryTile(room, anchor){
+  const gate = anchorTile(room, anchor);
+  if(!gate || !anchor) return null;
+  if(anchor.side === "N") return { x: gate.x, y: gate.y - 1 };
+  if(anchor.side === "S") return { x: gate.x, y: gate.y + 1 };
+  if(anchor.side === "W") return { x: gate.x - 1, y: gate.y };
+  return { x: gate.x + 1, y: gate.y };
+}
+
+function gateCodeForSide(side){
+  if(side === "N") return "G0";
+  if(side === "S") return "G2";
+  if(side === "E") return "G1";
+  return "G3";
+}
+
+function buildCorridorTilesFromPoints(a, b){
+  const tiles = [];
+
+  const pushUnique = (x, y) => {
+    const prev = tiles[tiles.length - 1];
+    if(!prev || prev.x !== x || prev.y !== y) tiles.push({ x, y });
+  };
+
+  if(a.x === b.x){
+    const from = Math.min(a.y, b.y);
+    const to = Math.max(a.y, b.y);
+    for(let y = from; y <= to; y++) pushUnique(a.x, y);
+    return tiles;
+  }
+
+  if(a.y === b.y){
+    const from = Math.min(a.x, b.x);
+    const to = Math.max(a.x, b.x);
+    for(let x = from; x <= to; x++) pushUnique(x, a.y);
+    return tiles;
+  }
+
+  const xStep = a.x < b.x ? 1 : -1;
+  const yStep = a.y < b.y ? 1 : -1;
+
+  for(let x = a.x; x !== b.x; x += xStep) pushUnique(x, a.y);
+  pushUnique(b.x, a.y);
+  for(let y = a.y; y !== b.y; y += yStep) pushUnique(b.x, y);
+  pushUnique(b.x, b.y);
+
+  return tiles;
+}
+
+function buildCorridorTiles(c){
+  const ra = getRoomById(c.roomAId);
+  const rb = getRoomById(c.roomBId);
+  if(!ra || !rb || !c.anchorA || !c.anchorB) return Array.isArray(c.tiles) ? c.tiles : [];
+  const a = corridorEntryTile(ra, c.anchorA);
+  const b = corridorEntryTile(rb, c.anchorB);
+  if(!a || !b) return Array.isArray(c.tiles) ? c.tiles : [];
+  return buildCorridorTilesFromPoints(a, b);
+}
+
+function refreshDynamicCorridors(){
+  dungeon.corridors.forEach(c => {
+    if(!Number.isInteger(c.roomAId) || !Number.isInteger(c.roomBId)) return;
+    if(c.preserveTiles === true) return;
+    c.tiles = buildCorridorTiles(c);
+  });
+}
+
+function findCorridor(x, y){
+  return dungeon.corridors.findIndex(c =>
+    Array.isArray(c.tiles) && c.tiles.some(t => t.x === x && t.y === y)
+  );
+}
+
+function updateSelectedCorridorEndpoint(t){
+  if(selectedCorridor === null) return false;
+  const corridor = dungeon.corridors[selectedCorridor];
+  if(!corridor) return false;
+
+  const roomA = getRoomById(corridor.roomAId);
+  const roomB = getRoomById(corridor.roomBId);
+  if(!roomA || !roomB) return false;
+
+  const anchorA = getAnchorFromWallTile(roomA, t);
+  if(anchorA){
+    corridor.anchorA = anchorA;
+    corridor.preserveTiles = false;
+    corridor.tiles = buildCorridorTiles(corridor);
+    status("Corridor endpoint A updated");
+    return true;
+  }
+
+  const anchorB = getAnchorFromWallTile(roomB, t);
+  if(anchorB){
+    corridor.anchorB = anchorB;
+    corridor.preserveTiles = false;
+    corridor.tiles = buildCorridorTiles(corridor);
+    status("Corridor endpoint B updated");
+    return true;
+  }
+
+  return false;
+}
+
+function inferCorridorsFromLayers(layers, rooms){
+  const geo = Array.isArray(layers) && Array.isArray(layers[1]) ? layers[1] : [];
+  const corridors = [];
+  const visited = new Set();
+
+  const inBounds = (x, y) => y >= 0 && y < geo.length && Array.isArray(geo[y]) && x >= 0 && x < geo[y].length;
+  const isCorridor = (x, y) => inBounds(x, y) && (geo[y][x] === "R0" || geo[y][x] === "R1");
+  const key = (x, y) => `${x},${y}`;
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+
+  const findRoomAtBoundary = (x, y) => {
+    for(const room of rooms){
+      if(x === room.x && y >= room.y && y < room.y + room.h) return room;
+      if(x === room.x + room.w - 1 && y >= room.y && y < room.y + room.h) return room;
+      if(y === room.y && x >= room.x && x < room.x + room.w) return room;
+      if(y === room.y + room.h - 1 && x >= room.x && x < room.x + room.w) return room;
+    }
+    return null;
+  };
+
+  const anchorFromBoundaryTile = (room, x, y) => {
+    if(y === room.y && x > room.x && x < room.x + room.w - 1) return { side: "N", offset: x - room.x };
+    if(y === room.y + room.h - 1 && x > room.x && x < room.x + room.w - 1) return { side: "S", offset: x - room.x };
+    if(x === room.x && y > room.y && y < room.y + room.h - 1) return { side: "W", offset: y - room.y };
+    if(x === room.x + room.w - 1 && y > room.y && y < room.y + room.h - 1) return { side: "E", offset: y - room.y };
+    return null;
+  };
+
+  const gateIndex = new Map();
+  for(let y = 0; y < geo.length; y++){
+    const row = geo[y];
+    if(!Array.isArray(row)) continue;
+    for(let x = 0; x < row.length; x++){
+      const code = row[x];
+      if(!/^G[0-3]$/.test(code || "")) continue;
+      const room = findRoomAtBoundary(x, y);
+      if(!room) continue;
+      const anchor = anchorFromBoundaryTile(room, x, y);
+      if(!anchor) continue;
+      gateIndex.set(`${x},${y}`, { roomId: room.id, anchor });
+    }
+  }
+
+  for(let y = 0; y < geo.length; y++){
+    const row = geo[y];
+    if(!Array.isArray(row)) continue;
+    for(let x = 0; x < row.length; x++){
+      if(!isCorridor(x, y) || visited.has(key(x, y))) continue;
+      const stack = [{ x, y }];
+      const tiles = [];
+      visited.add(key(x, y));
+
+      while(stack.length){
+        const curr = stack.pop();
+        tiles.push(curr);
+        for(const [dx, dy] of dirs){
+          const nx = curr.x + dx;
+          const ny = curr.y + dy;
+          if(!isCorridor(nx, ny) || visited.has(key(nx, ny))) continue;
+          visited.add(key(nx, ny));
+          stack.push({ x: nx, y: ny });
+        }
+      }
+
+      const endpointMap = new Map();
+      tiles.forEach(t => {
+        dirs.forEach(([dx, dy]) => {
+          const nx = t.x + dx;
+          const ny = t.y + dy;
+          if(!inBounds(nx, ny)) return;
+          const endpoint = gateIndex.get(`${nx},${ny}`);
+          if(!endpoint) return;
+          const k = `${endpoint.roomId}:${endpoint.anchor.side}:${endpoint.anchor.offset}`;
+          if(!endpointMap.has(k)) endpointMap.set(k, endpoint);
+        });
+      });
+
+      const endpoints = Array.from(endpointMap.values());
+      if(endpoints.length === 2 && endpoints[0].roomId !== endpoints[1].roomId){
+        const a = endpoints[0];
+        const b = endpoints[1];
+        corridors.push({
+          id: corridors.length + 1,
+          roomAId: a.roomId,
+          roomBId: b.roomId,
+          anchorA: a.anchor,
+          anchorB: b.anchor,
+          tiles,
+          preserveTiles: true
+        });
+      } else {
+        corridors.push({
+          id: corridors.length + 1,
+          tiles
+        });
+      }
+    }
+  }
+
+  return corridors;
+}
+
+function enterConnectMode(){
+  connectMode = true;
+  connectStage = 0;
+  connectRoomAId = null;
+  connectRoomBId = null;
+  connectAnchorA = null;
+  status("Select first room");
+}
+
+function resetConnectState(){
+  connectMode = false;
+  connectStage = 0;
+  connectRoomAId = null;
+  connectRoomBId = null;
+  connectAnchorA = null;
+}
+
+function resetDragState(){
+  isDragging = false;
+  hasDragged = false;
+  startTile = null;
+  previewRoom = null;
+}
+
+function resetMoveState(){
+  isMoving = false;
+  moveStartTile = null;
+  moveRoomStart = null;
+}
+
+function resetMarkerMoveState(){
+  isMovingMarker = false;
+  moveMarkerStartTile = null;
+  moveMarkerStart = null;
+}
+
+function resetMarkerFacingState(){
+  isFacingMarker = false;
+  facingDragStartPixel = null;
+  facingDragStartFacing = "N";
+}
+
+function resetResizeState(){
+  isResizing = false;
+  resizeStartTile = null;
+  resizeRoomStart = null;
+  resizeEdges = null;
+}
+
+function commitPreviewRoom(){
+  if(!previewRoom) return false;
+
+  const room = {
+    ...previewRoom,
+    id: newRoomId()
+  };
+
+  if(isThinRoom(room)){
+    addStandaloneCorridor(tilesFromThinRoom(room));
+    status("Thin room converted to corridor");
+    return true;
+  }
+
+  const center = getRoomCenter(room);
+
+  dungeon.rooms.push(room);
+  dungeon.lights.push({
+    roomId: room.id,
+    x: center.x,
+    y: center.y,
+    color: randomWarmLightColor(),
+    radius:3
+  });
+
+  return true;
+}
+
+/* ================= RENDER ================= */
+
+function render(){
+  refreshDynamicCorridors();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // ROOMS
+  dungeon.rooms.forEach((r,i)=>{
+    const p = toPixel(r.x,r.y);
+
+    ctx.fillStyle = "#2a2f3a";
+    ctx.fillRect(p.x,p.y,r.w*tile*scale,r.h*tile*scale);
+
+    ctx.strokeStyle = (i===selected) ? "#4da3ff" : "#444";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(p.x,p.y,r.w*tile*scale,r.h*tile*scale);
+  });
+
+  // PREVIEW ROOM
+  if(previewRoom){
+    const p = toPixel(previewRoom.x,previewRoom.y);
+
+    ctx.fillStyle = "rgba(77,163,255,0.25)";
+    ctx.fillRect(p.x,p.y,
+      previewRoom.w*tile*scale,
+      previewRoom.h*tile*scale
+    );
+
+    ctx.strokeStyle = "#4da3ff";
+    ctx.setLineDash([6,4]);
+    ctx.strokeRect(p.x,p.y,
+      previewRoom.w*tile*scale,
+      previewRoom.h*tile*scale
+    );
+    ctx.setLineDash([]);
+  }
+
+  // CORRIDORS
+  dungeon.corridors.forEach((c, i)=>{
+    if(!Array.isArray(c.tiles)) return;
+    ctx.fillStyle = (i === selectedCorridor) ? "#7cb4ff" : "#555";
+    c.tiles.forEach(t=>{
+      const p = toPixel(t.x,t.y);
+      ctx.fillRect(p.x,p.y,tile*scale,tile*scale);
+    });
+  });
+
+  dungeon.markers.forEach((m, i) => {
+    drawMarkerSymbol(m, i === selectedMarker);
+  });
+
+  // LIGHTS
+  dungeon.lights.forEach(l=>{
+    const p = toPixel(l.x,l.y);
+
+    const g = ctx.createRadialGradient(
+      p.x+tile*scale/2,
+      p.y+tile*scale/2,
+      0,
+      p.x+tile*scale/2,
+      p.y+tile*scale/2,
+      l.radius*tile*scale
+    );
+
+    g.addColorStop(0, l.color + "55");
+    g.addColorStop(1, "transparent");
+
+    ctx.fillStyle = g;
+    ctx.fillRect(
+      p.x-l.radius*tile*scale,
+      p.y-l.radius*tile*scale,
+      l.radius*2*tile*scale,
+      l.radius*2*tile*scale
+    );
+  });
+
+  updateJSON();
+  renderMarkerInspector();
+}
+
+/* ================= ROOM CREATION ================= */
+
+canvas.addEventListener("mousedown", e => {
+  if(spaceHeld || e.button === 1){
+    isPanning = true;
+    return;
+  }
+
+  const t = toTile(e.offsetX,e.offsetY);
+  if(!Number.isFinite(t.x) || !Number.isFinite(t.y)) return;
+
+  const m = markerAtTile(t.x, t.y);
+  if(e.button === 2){
+    if(m !== -1){
+      selectedMarker = m;
+      selected = null;
+      selectedCorridor = null;
+    }
+    if(selectedMarker !== null){
+      const marker = dungeon.markers[selectedMarker];
+      if(marker){
+        isFacingMarker = true;
+        facingDragStartPixel = { x: e.offsetX, y: e.offsetY };
+        facingDragStartFacing = marker.facing || "N";
+      }
+      render();
+    }
+    return;
+  }
+
+  if(e.button !== 0) return;
+
+  if(m !== -1){
+    selectedMarker = m;
+    selected = null;
+    selectedCorridor = null;
+    isMovingMarker = true;
+    moveMarkerStartTile = t;
+    moveMarkerStart = { x: dungeon.markers[m].x, y: dungeon.markers[m].y };
+    render();
+    return;
+  }
+
+  if(markerMode){
+    placeMarkerAt(t);
+    render();
+    return;
+  }
+
+  if(connectMode){
+    const r = findRoom(t.x,t.y);
+    if(connectStage === 0){
+      if(r === -1){
+        status("Select first room");
+      } else {
+        connectRoomAId = dungeon.rooms[r].id;
+        connectStage = 1;
+        status("Pick first wall connection point");
+      }
+    } else if(connectStage === 1){
+      const roomA = getRoomById(connectRoomAId);
+      const anchor = roomA ? getAnchorFromWallTile(roomA, t) : null;
+      if(!anchor){
+        status("Pick a wall point (not corner) on first room");
+      } else {
+        connectAnchorA = anchor;
+        connectStage = 2;
+        status("Select second room");
+      }
+    } else if(connectStage === 2){
+      if(r === -1){
+        status("Select second room");
+      } else {
+        const room = dungeon.rooms[r];
+        if(room.id === connectRoomAId){
+          status("Cannot connect room to itself");
+        } else {
+          connectRoomBId = room.id;
+          connectStage = 3;
+          status("Pick second wall connection point");
+        }
+      }
+    } else if(connectStage === 3){
+      const roomB = getRoomById(connectRoomBId);
+      const anchorB = roomB ? getAnchorFromWallTile(roomB, t) : null;
+      if(!anchorB){
+        status("Pick a wall point (not corner) on second room");
+      } else {
+        const connected = createCorridor(connectRoomAId, connectAnchorA, connectRoomBId, anchorB);
+        if(connected){
+          resetConnectState();
+          status("Connected");
+        }
+      }
+    }
+    render();
+    return;
+  }
+
+  if(selectedCorridor !== null && updateSelectedCorridorEndpoint(t)){
+    render();
+    return;
+  }
+
+  const c = findCorridor(t.x, t.y);
+  if(c !== -1){
+    selectedCorridor = c;
+    selected = null;
+    selectedMarker = null;
+    render();
+    return;
+  }
+
+  const r = findRoom(t.x,t.y);
+  if(r !== -1){
+    selected = r;
+    selectedCorridor = null;
+    selectedMarker = null;
+    const room = dungeon.rooms[r];
+    const edges = getResizeEdges(room, t);
+    if(edges){
+      isResizing = true;
+      resizeStartTile = t;
+      resizeRoomStart = { ...room };
+      resizeEdges = edges;
+    } else {
+      isMoving = true;
+      moveStartTile = t;
+      moveRoomStart = { ...room };
+    }
+    render();
+    return;
+  }
+
+  isDragging = true;
+  hasDragged = false;
+  const wasSelected = selected !== null || selectedCorridor !== null || selectedMarker !== null;
+  selected = null;
+  selectedCorridor = null;
+  selectedMarker = null;
+  startTile = t;
+  previewRoom = null;
+  if(wasSelected) render();
+});
+
+canvas.addEventListener("mousemove", e => {
+
+  if(isPanning){
+    offsetX += e.movementX;
+    offsetY += e.movementY;
+    render();
+    return;
+  }
+
+  if(isFacingMarker && selectedMarker !== null){
+    const marker = dungeon.markers[selectedMarker];
+    if(marker && facingDragStartPixel){
+      marker.facing = facingFromDrag(
+        e.offsetX - facingDragStartPixel.x,
+        e.offsetY - facingDragStartPixel.y,
+        facingDragStartFacing
+      );
+      render();
+    }
+    return;
+  }
+
+  if(!isDragging) return;
+  const t = toTile(e.offsetX,e.offsetY);
+  if(!Number.isFinite(t.x) || !Number.isFinite(t.y)) return;
+
+  const x = Math.min(startTile.x, t.x);
+  const y = Math.min(startTile.y, t.y);
+  const w = Math.abs(startTile.x - t.x) + 1;
+  const h = Math.abs(startTile.y - t.y) + 1;
+
+  if(w === 1 && h === 1){
+    previewRoom = null;
+    return;
+  }
+
+  hasDragged = true;
+  previewRoom = { x,y,w,h };
+  render();
+});
+
+canvas.addEventListener("mousemove", e => {
+  const t = toTile(e.offsetX,e.offsetY);
+  if(!Number.isFinite(t.x) || !Number.isFinite(t.y)) return;
+
+  if(isMovingMarker && selectedMarker !== null){
+    const marker = dungeon.markers[selectedMarker];
+    if(!marker || !moveMarkerStartTile || !moveMarkerStart) return;
+    marker.x = moveMarkerStart.x + (t.x - moveMarkerStartTile.x);
+    marker.y = moveMarkerStart.y + (t.y - moveMarkerStartTile.y);
+    render();
+    return;
+  }
+
+  if(isMoving && selected !== null){
+    const room = dungeon.rooms[selected];
+    if(!room || !moveStartTile || !moveRoomStart) return;
+
+    room.x = moveRoomStart.x + (t.x - moveStartTile.x);
+    room.y = moveRoomStart.y + (t.y - moveStartTile.y);
+    updateRoomLights(room);
+    render();
+    return;
+  }
+
+  if(isResizing && selected !== null){
+    const room = dungeon.rooms[selected];
+    if(!room || !resizeStartTile || !resizeRoomStart || !resizeEdges) return;
+
+    const dx = t.x - resizeStartTile.x;
+    const dy = t.y - resizeStartTile.y;
+    const startLeft = resizeRoomStart.x;
+    const startTop = resizeRoomStart.y;
+    const startRight = resizeRoomStart.x + resizeRoomStart.w;
+    const startBottom = resizeRoomStart.y + resizeRoomStart.h;
+
+    let left = startLeft;
+    let right = startRight;
+    let top = startTop;
+    let bottom = startBottom;
+
+    if(resizeEdges.left) left = Math.min(startRight - 1, startLeft + dx);
+    if(resizeEdges.right) right = Math.max(startLeft + 1, startRight + dx);
+    if(resizeEdges.top) top = Math.min(startBottom - 1, startTop + dy);
+    if(resizeEdges.bottom) bottom = Math.max(startTop + 1, startBottom + dy);
+
+    room.x = left;
+    room.y = top;
+    room.w = right - left;
+    room.h = bottom - top;
+
+    if(isThinRoom(room)){
+      const converted = convertThinRoomToCorridor(room.id);
+      if(converted){
+        resetResizeState();
+        status("Thin room converted to corridor");
+        render();
+      }
+      return;
+    }
+
+    updateRoomLights(room);
+    render();
+  }
+});
+
+canvas.addEventListener("mouseup", () => {
+
+  if(isPanning){
+    isPanning = false;
+    return;
+  }
+
+  if(isMoving){
+    resetMoveState();
+    return;
+  }
+
+  if(isMovingMarker){
+    resetMarkerMoveState();
+    return;
+  }
+
+  if(isFacingMarker){
+    resetMarkerFacingState();
+    return;
+  }
+
+  if(isResizing){
+    resetResizeState();
+    return;
+  }
+
+  if(!isDragging){
+    resetDragState();
+    return;
+  }
+
+  if(!hasDragged){
+    resetDragState();
+    return;
+  }
+
+  const changed = commitPreviewRoom();
+  resetDragState();
+  if(changed) render();
+});
+
+canvas.addEventListener("mouseleave", () => {
+  let changed = false;
+
+  if(isPanning){
+    isPanning = false;
+  }
+
+  if(isMoving){
+    resetMoveState();
+  }
+
+  if(isMovingMarker){
+    resetMarkerMoveState();
+  }
+
+  if(isFacingMarker){
+    resetMarkerFacingState();
+  }
+
+  if(isResizing){
+    resetResizeState();
+  }
+
+  if(isDragging && hasDragged){
+    changed = commitPreviewRoom();
+  }
+  resetDragState();
+
+  if(changed) render();
+});
+
+canvas.addEventListener("contextmenu", e => {
+  e.preventDefault();
+});
+
+/* ================= ZOOM ================= */
+
+canvas.addEventListener("wheel", e=>{
+  e.preventDefault();
+
+  const mouseX = e.offsetX;
+  const mouseY = e.offsetY;
+
+  const worldX = (mouseX - offsetX) / scale;
+  const worldY = (mouseY - offsetY) / scale;
+
+  const zoom = e.deltaY < 0 ? 1.1 : 0.9;
+  scale *= zoom;
+
+  offsetX = mouseX - worldX * scale;
+  offsetY = mouseY - worldY * scale;
+
+  render();
+});
+
+/* ================= CORRIDOR ================= */
+
+function createCorridor(roomAId, anchorA, roomBId, anchorB){
+  const ra = getRoomById(roomAId);
+  const rb = getRoomById(roomBId);
+  if(!ra || !rb || !anchorA || !anchorB) return false;
+  if(ra.id === rb.id){
+    status("Cannot connect a room to itself");
+    return false;
+  }
+
+  const alreadyConnected = dungeon.corridors.some(c =>
+    (
+      c.roomAId === ra.id &&
+      c.roomBId === rb.id &&
+      c.anchorA?.side === anchorA.side &&
+      c.anchorA?.offset === anchorA.offset &&
+      c.anchorB?.side === anchorB.side &&
+      c.anchorB?.offset === anchorB.offset
+    ) || (
+      c.roomAId === rb.id &&
+      c.roomBId === ra.id &&
+      c.anchorA?.side === anchorB.side &&
+      c.anchorA?.offset === anchorB.offset &&
+      c.anchorB?.side === anchorA.side &&
+      c.anchorB?.offset === anchorA.offset
+    )
+  );
+  if(alreadyConnected){
+    status("Rooms already connected");
+    return false;
+  }
+
+  const corridor = {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    roomAId: ra.id,
+    roomBId: rb.id,
+    anchorA,
+    anchorB,
+    tiles: [],
+    preserveTiles: false
+  };
+  corridor.tiles = buildCorridorTiles(corridor);
+  dungeon.corridors.push(corridor);
+  selectedCorridor = dungeon.corridors.length - 1;
+  return true;
+}
+
+/* ================= IMPORT / EXPORT ================= */
+
+function maxExportBounds(data){
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  const includePoint = (x, y) => {
+    if(!Number.isFinite(x) || !Number.isFinite(y)) return;
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  };
+
+  data.rooms.forEach(r => {
+    includePoint(r.x, r.y);
+    includePoint(r.x + r.w - 1, r.y + r.h - 1);
+  });
+  data.corridors.forEach(c => {
+    if(!Array.isArray(c.tiles)) return;
+    c.tiles.forEach(t => includePoint(t.x, t.y));
+  });
+
+  if(!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)){
+    return {
+      width: 1,
+      height: 1,
+      minX: 0,
+      minY: 0,
+      offsetX: 0,
+      offsetY: 0
+    };
+  }
+
+  const width = Math.max(maxX - minX + 1, 1);
+  const height = Math.max(maxY - minY + 1, 1);
+
+  return {
+    width,
+    height,
+    minX,
+    minY,
+    offsetX: -minX,
+    offsetY: -minY
+  };
+}
+
+function makeLayer(width, height, fill){
+  return Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => fill)
+  );
+}
+
+function keyXY(x, y){
+  return `${x},${y}`;
+}
+
+function isWallCode(code){
+  return code === "W0" || code === "W1" || code === "W2" || code === "W3";
+}
+
+function isCornerCode(code){
+  return code === "C0" || code === "C1" || code === "C2" || code === "C3";
+}
+
+function wallToGate(code){
+  if(code === "W0") return "G0";
+  if(code === "W1") return "G1";
+  if(code === "W2") return "G2";
+  if(code === "W3") return "G3";
+  return code;
+}
+
+function stampRoomsForExport(floor, geo, rooms, inBounds, floorCode, shift){
+  rooms.forEach(room => {
+    const tl = shift(room.x, room.y);
+    const br = shift(room.x + room.w - 1, room.y + room.h - 1);
+    const left = tl.x;
+    const top = tl.y;
+    const right = br.x;
+    const bottom = br.y;
+
+    for(let y = top; y <= bottom; y++){
+      for(let x = left; x <= right; x++){
+        if(inBounds(x, y)) floor[y][x] = floorCode(x, y);
+      }
+    }
+    if(!inBounds(left, top) || !inBounds(right, bottom)) return;
+
+    geo[top][left] = "C0";
+    geo[top][right] = "C1";
+    geo[bottom][right] = "C2";
+    geo[bottom][left] = "C3";
+    floor[top][left] = "  ";
+    floor[top][right] = "  ";
+    floor[bottom][right] = "  ";
+    floor[bottom][left] = "  ";
+
+    for(let x = left + 1; x <= right - 1; x++){
+      if(inBounds(x, top)) geo[top][x] = "W0";
+      if(inBounds(x, bottom)) geo[bottom][x] = "W2";
+    }
+    for(let y = top + 1; y <= bottom - 1; y++){
+      if(inBounds(left, y)) geo[y][left] = "W3";
+      if(inBounds(right, y)) geo[y][right] = "W1";
+    }
+  });
+}
+
+function collectCorridorTiles(corridors, shift, inBounds){
+  const tiles = [];
+  const tileSet = new Set();
+
+  corridors.forEach(c => {
+    if(!Array.isArray(c.tiles)) return;
+    c.tiles.forEach(t => {
+      const p = shift(t.x, t.y);
+      if(!inBounds(p.x, p.y)) return;
+      tiles.push(p);
+      tileSet.add(keyXY(p.x, p.y));
+    });
+  });
+
+  return { tiles, tileSet };
+}
+
+function corridorCodeAt(x, y, corridorSet){
+  const hasH = corridorSet.has(keyXY(x - 1, y)) || corridorSet.has(keyXY(x + 1, y));
+  const hasV = corridorSet.has(keyXY(x, y - 1)) || corridorSet.has(keyXY(x, y + 1));
+  return hasH && !hasV ? "R0" : "R1";
+}
+
+function stampCorridorsForExport(floor, geo, corridorTiles, corridorSet){
+  corridorTiles.forEach(p => {
+    floor[p.y][p.x] = "  ";
+    geo[p.y][p.x] = corridorCodeAt(p.x, p.y, corridorSet);
+  });
+}
+
+function inferGatesFromAdjacency(geo, corridorTiles, inBounds){
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+
+  corridorTiles.forEach(p => {
+    dirs.forEach(([dx, dy]) => {
+      const nx = p.x + dx;
+      const ny = p.y + dy;
+      if(!inBounds(nx, ny)) return;
+      const code = geo[ny][nx];
+      if(isCornerCode(code)) return;
+      if(!isWallCode(code)) return;
+      geo[ny][nx] = wallToGate(code);
+    });
+  });
+}
+
+function stampAnchoredGates(geo, corridors, rooms, shift, inBounds){
+  corridors.forEach(c => {
+    const roomA = rooms.find(r => r.id === c.roomAId);
+    const roomB = rooms.find(r => r.id === c.roomBId);
+    const aRaw = anchorTile(roomA, c.anchorA);
+    const bRaw = anchorTile(roomB, c.anchorB);
+    const a = aRaw ? shift(aRaw.x, aRaw.y) : null;
+    const b = bRaw ? shift(bRaw.x, bRaw.y) : null;
+    if(a && inBounds(a.x, a.y) && c.anchorA && isWallCode(geo[a.y][a.x])) geo[a.y][a.x] = gateCodeForSide(c.anchorA.side);
+    if(b && inBounds(b.x, b.y) && c.anchorB && isWallCode(geo[b.y][b.x])) geo[b.y][b.x] = gateCodeForSide(c.anchorB.side);
+  });
+}
+
+function buildTileExportData(data){
+  const size = maxExportBounds(data);
+  const shift = (x, y) => ({ x: x + size.offsetX, y: y + size.offsetY });
+  const floor = makeLayer(size.width, size.height, "  ");
+  const geo = makeLayer(size.width, size.height, "  ");
+  const inBounds = (x, y) => y >= 0 && y < size.height && x >= 0 && x < size.width;
+  const floorCode = (x, y) => `F${Math.abs(x + y) % 4}`;
+
+  stampRoomsForExport(floor, geo, data.rooms, inBounds, floorCode, shift);
+
+  const { tiles: corridorTiles, tileSet: corridorSet } = collectCorridorTiles(data.corridors, shift, inBounds);
+  stampCorridorsForExport(floor, geo, corridorTiles, corridorSet);
+  inferGatesFromAdjacency(geo, corridorTiles, inBounds);
+  stampAnchoredGates(geo, data.corridors, data.rooms, shift, inBounds);
+
+  const lights = data.lights.map(l => {
+    const intensity = Number.isFinite(l.intensity) ? l.intensity : 0.4;
+    const radius = Number.isFinite(l.radius) ? l.radius : 12;
+    const color = typeof l.color === "string" ? l.color : randomWarmLightColor();
+    const x = Number.isFinite(l.x) ? Number((l.x + size.offsetX).toFixed(2)) : 0;
+    const y = Number.isFinite(l.y) ? Number((l.y + size.offsetY).toFixed(2)) : 0;
+    return [x, y, color, intensity, radius];
+  });
+
+  const markers = data.markers.map(m => {
+    const x = Number((m.x + size.offsetX).toFixed(2));
+    const y = Number((m.y + size.offsetY).toFixed(2));
+    const facing = (m.facing === "N" || m.facing === "E" || m.facing === "S" || m.facing === "W") ? m.facing : "N";
+    if(m.type === "ENCOUNTER"){
+      return {
+        x,
+        y,
+        type: "ENCOUNTER",
+        facing,
+        enemies: Array.isArray(m.enemies) ? m.enemies.map(enemy => ({
+          type: typeof enemy.type === "string" && enemy.type.trim() ? enemy.type.trim() : "skeleton_soldier",
+          dx: Number.isFinite(enemy.dx) ? Math.round(enemy.dx) : 0,
+          dy: Number.isFinite(enemy.dy) ? Math.round(enemy.dy) : 0
+        })) : [{ type: "skeleton_soldier", dx: 0, dy: 0 }]
+      };
+    }
+    if(m.type === "BOSS"){
+      const boss = m.enemy || {};
+      return {
+        x,
+        y,
+        type: "BOSS",
+        facing,
+        enemy: {
+          type: typeof boss.type === "string" && boss.type.trim() ? boss.type.trim() : "director_mortis",
+          dx: Number.isFinite(boss.dx) ? Math.round(boss.dx) : 0,
+          dy: Number.isFinite(boss.dy) ? Math.round(boss.dy) : 0
+        }
+      };
+    }
+    return { x, y, type: "START", facing };
+  });
+
+  return {
+    size,
+    layers: [floor, geo],
+    lights,
+    markers
+  };
+}
+
+function formatNum(n){
+  if(Number.isInteger(n)) return `${n}`;
+  return `${Number(n.toFixed(3))}`;
+}
+
+function formatTileJson(data){
+  const lines = [];
+  lines.push("{");
+  lines.push('  "size": {');
+  lines.push(`    "width": ${data.size.width},`);
+  lines.push(`    "height": ${data.size.height}`);
+  lines.push("  },");
+  lines.push("");
+  lines.push('  "layers": [');
+  for(let li = 0; li < data.layers.length; li++){
+    const layer = data.layers[li];
+    lines.push("    [");
+    for(let y = 0; y < layer.length; y++){
+      const row = layer[y];
+      const comma = y < layer.length - 1 ? "," : "";
+      lines.push(`      [${row.map(v => JSON.stringify(v)).join(", ")}]${comma}`);
+    }
+    const layerComma = li < data.layers.length - 1 ? "," : "";
+    lines.push(`    ]${layerComma}`);
+  }
+  lines.push("  ],");
+  lines.push("");
+  lines.push('  "lights": [');
+  for(let i = 0; i < data.lights.length; i++){
+    const l = data.lights[i];
+    const comma = i < data.lights.length - 1 ? "," : "";
+    lines.push(`    [${formatNum(l[0])}, ${formatNum(l[1])}, ${JSON.stringify(l[2])}, ${formatNum(l[3])}, ${formatNum(l[4])}]${comma}`);
+  }
+  lines.push("  ],");
+  lines.push("");
+  lines.push('  "markers": [');
+  for(let i = 0; i < data.markers.length; i++){
+    const marker = data.markers[i];
+    const comma = i < data.markers.length - 1 ? "," : "";
+    lines.push(`    ${JSON.stringify(marker)}${comma}`);
+  }
+  lines.push("  ]");
+  lines.push("}");
+  return `${lines.join("\n")}\n`;
+}
+
+document.getElementById("exportBtn").onclick = async ()=>{
+  try{
+    const payload = buildTileExportData(dungeon);
+    await navigator.clipboard.writeText(formatTileJson(payload));
+    status("Copied to clipboard");
+  }catch(e){
+    status("Clipboard write failed");
+  }
+};
+
+document.getElementById("importBtn").onclick = async ()=>{
+  let txt = "";
+  try{
+    txt = await navigator.clipboard.readText();
+  }catch(e){
+    status("Clipboard read failed");
+    return;
+  }
+
+  try{
+    const parsed = JSON.parse(txt);
+    dungeon = normalizeImportedData(parsed);
+    selected = null;
+    selectedCorridor = null;
+    selectedMarker = null;
+    resetConnectState();
+    render();
+    status("Imported");
+  }catch(e){
+    status("Invalid JSON");
+  }
+};
+
+/* ================= KEYBOARD ================= */
+
+window.addEventListener("keydown", e=>{
+  if(e.code==="Space") spaceHeld=true;
+
+  if(e.key==="Delete"){
+    if(selectedMarker!==null){
+      dungeon.markers.splice(selectedMarker,1);
+      selectedMarker = null;
+      render();
+      return;
+    }
+    if(selected!==null){
+      const room = dungeon.rooms[selected];
+      if(room){
+        dungeon.rooms.splice(selected,1);
+        removeRoomLinks(room.id);
+        if(connectRoomAId === room.id || connectRoomBId === room.id){
+          resetConnectState();
+        }
+      }
+      selected=null;
+      selectedCorridor=null;
+      render();
+      return;
+    }
+    if(selectedCorridor!==null){
+      dungeon.corridors.splice(selectedCorridor,1);
+      selectedCorridor = null;
+      render();
+      return;
+    }
+  }
+
+  if(e.key.toLowerCase()==="c"){
+    if(markerMode) return;
+    selected = null;
+    selectedCorridor = null;
+    selectedMarker = null;
+    enterConnectMode();
+  }
+
+  if(e.key.toLowerCase()==="m"){
+    toggleMarkerMode(!markerMode);
+    render();
+    return;
+  }
+
+  if(markerMode && (e.key==="1" || e.key==="2" || e.key==="3")){
+    markerType = e.key==="1" ? "START" : e.key==="2" ? "ENCOUNTER" : "BOSS";
+    markerTypeSelect.value = markerType;
+    status(`Marker type: ${markerType}`);
+    render();
+    return;
+  }
+
+  if(e.key==="Escape"){
+    if(connectMode){
+      resetConnectState();
+      status("Connect cancelled");
+      render();
+      return;
+    }
+    if(markerMode){
+      toggleMarkerMode(false);
+      render();
+    }
+  }
+});
+
+window.addEventListener("keyup", e=>{
+  if(e.code==="Space") spaceHeld=false;
+});
+
+/* ================= JSON VIEW ================= */
+
+function updateJSON(){
+  if(jsonView)
+    jsonView.textContent = JSON.stringify(dungeon,null,2);
+}
+
+markerModeBtn.onclick = ()=>{
+  toggleMarkerMode(!markerMode);
+  render();
+};
+
+markerTypeSelect.onchange = ()=>{
+  markerType = markerTypeSelect.value;
+  status(`Marker type: ${markerType}`);
+  if(markerMode) render();
+};
+
+markerDetailsEl.addEventListener("input", e => {
+  if(selectedMarker === null) return;
+  const marker = dungeon.markers[selectedMarker];
+  if(!marker) return;
+  const action = e.target?.dataset?.action;
+  if(!action) return;
+
+  if(action === "marker-facing"){
+    marker.facing = (e.target.value === "N" || e.target.value === "E" || e.target.value === "S" || e.target.value === "W")
+      ? e.target.value
+      : "N";
+  } else if(action === "boss-type"){
+    marker.enemy.type = e.target.value.trim() || "director_mortis";
+  } else if(action === "boss-dx"){
+    marker.enemy.dx = Number.isFinite(Number(e.target.value)) ? Math.round(Number(e.target.value)) : 0;
+  } else if(action === "boss-dy"){
+    marker.enemy.dy = Number.isFinite(Number(e.target.value)) ? Math.round(Number(e.target.value)) : 0;
+  } else if(action.startsWith("enemy-")){
+    const i = Number(e.target.dataset.i);
+    if(!Number.isInteger(i) || !marker.enemies || !marker.enemies[i]) return;
+    if(action === "enemy-type"){
+      marker.enemies[i].type = e.target.value.trim() || "skeleton_soldier";
+    } else if(action === "enemy-dx"){
+      marker.enemies[i].dx = Number.isFinite(Number(e.target.value)) ? Math.round(Number(e.target.value)) : 0;
+    } else if(action === "enemy-dy"){
+      marker.enemies[i].dy = Number.isFinite(Number(e.target.value)) ? Math.round(Number(e.target.value)) : 0;
+    }
+  }
+  render();
+});
+
+markerDetailsEl.addEventListener("click", e => {
+  if(selectedMarker === null) return;
+  const marker = dungeon.markers[selectedMarker];
+  if(!marker) return;
+  const action = e.target?.dataset?.action;
+  if(!action) return;
+
+  if(action === "enemy-add" && marker.type === "ENCOUNTER"){
+    marker.enemies.push({ type: "skeleton_soldier", dx: 0, dy: 0 });
+  } else if(action === "enemy-remove" && marker.type === "ENCOUNTER"){
+    const i = Number(e.target.dataset.i);
+    if(Number.isInteger(i) && marker.enemies[i]){
+      marker.enemies.splice(i, 1);
+      if(marker.enemies.length === 0){
+        marker.enemies.push({ type: "skeleton_soldier", dx: 0, dy: 0 });
+      }
+    }
+  }
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
