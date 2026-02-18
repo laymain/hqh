@@ -1,0 +1,80 @@
+[gd_scene format=3 uid="uid://ckfgtbd0vhb4s"]
+
+[ext_resource type="Script" uid="uid://dc6bji7b4l1vu" path="res://scripts/map/map_manager.gd" id="1_0xm2m"]
+[ext_resource type="MeshLibrary" uid="uid://cpbthfekylqht" path="res://dungeon_ml.meshlib" id="1_ig7tw"]
+[ext_resource type="Script" uid="uid://bdkhoi3jstcbw" path="res://scripts/environment.gd" id="4_1bvp3"]
+[ext_resource type="Script" uid="uid://c38vt28qnecnq" path="res://scripts/player.gd" id="5_lquwl"]
+[ext_resource type="Texture2D" uid="uid://0xabrheld2yi" path="res://assets/character/sprite.png" id="6_7mycd"]
+[ext_resource type="Script" uid="uid://l3t2y1j2ogsv" path="res://scripts/following_camera.gd" id="7_sq1id"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_272bh"]
+atlas = ExtResource("6_7mycd")
+region = Rect2(0, 0, 16, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_5vw27"]
+atlas = ExtResource("6_7mycd")
+region = Rect2(16, 0, 16, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kek77"]
+atlas = ExtResource("6_7mycd")
+region = Rect2(32, 0, 16, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4c57u"]
+atlas = ExtResource("6_7mycd")
+region = Rect2(48, 0, 16, 24)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_efxa6"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_272bh")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_5vw27")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kek77")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4c57u")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 5.0
+}]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_7mycd"]
+radius = 0.3
+height = 0.8
+
+[node name="Main" type="Node3D" unique_id=150515328]
+
+[node name="Camera" type="Node" parent="." unique_id=1162181539 node_paths=PackedStringArray("target")]
+script = ExtResource("7_sq1id")
+target = NodePath("../Player")
+
+[node name="Environment" type="Node" parent="." unique_id=216227157]
+script = ExtResource("4_1bvp3")
+
+[node name="MapManager" type="Node" parent="." unique_id=1026537415 node_paths=PackedStringArray("player")]
+script = ExtResource("1_0xm2m")
+cell_size = Vector3(4, 4, 4)
+mesh_library = ExtResource("1_ig7tw")
+player = NodePath("../Player")
+
+[node name="Player" type="CharacterBody3D" parent="." unique_id=1618418290]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+script = ExtResource("5_lquwl")
+
+[node name="AnimatedSprite3D" type="AnimatedSprite3D" parent="Player" unique_id=1798722100]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 0, -0.5, 0)
+billboard = 2
+double_sided = false
+texture_filter = 0
+sprite_frames = SubResource("SpriteFrames_efxa6")
+animation = &"idle"
+autoplay = "idle"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=301652990]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.602, 0)
+shape = SubResource("CapsuleShape3D_7mycd")
