@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://dvlng10lywdru"]
 
 [ext_resource type="Texture2D" uid="uid://bixi41jbgtw8t" path="res://assets/weapon/weapon_sword_iron_02.png" id="1_jm7kl"]
+[ext_resource type="Script" uid="uid://d5j6efvklvtx" path="res://scripts/weapon/weapon.gd" id="1_rv2qq"]
 [ext_resource type="Shader" uid="uid://geq7jsoxllg5" path="res://shaders/character.gdshader" id="3_sjx0v"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_uj8n2"]
@@ -8,10 +9,11 @@ render_priority = 0
 shader = ExtResource("3_sjx0v")
 shader_parameter/albedo_tex = ExtResource("1_jm7kl")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/rotation = 0.0
 shader_parameter/backlight_color = Color(1, 1, 1, 1)
 shader_parameter/backlight_strength = 1.0
 shader_parameter/alpha_cutoff = 0.01
+shader_parameter/rotation = 0.0
+shader_parameter/hovering = false
 
 [sub_resource type="Animation" id="Animation_f73me"]
 length = 0.001
@@ -43,6 +45,20 @@ tracks/0/keys = {
 "update": 0,
 "values": [0.0, 0.45, -2.5, 0.0]
 }
+tracks/1/type = "method"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath(".")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0.13333334),
+"transitions": PackedFloat32Array(1),
+"values": [{
+"args": [],
+"method": &"do_damage"
+}]
+}
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_uj8n2"]
 _data = {
@@ -51,6 +67,7 @@ _data = {
 }
 
 [node name="MeleeWeapon" type="Node3D" unique_id=1979126073]
+script = ExtResource("1_rv2qq")
 
 [node name="Sprite3D" type="Sprite3D" parent="." unique_id=1056104554]
 transform = Transform3D(2.25, 0, 0, 0, 2.25, 0, 0, 0, 2.25, 0, 0, 0)
