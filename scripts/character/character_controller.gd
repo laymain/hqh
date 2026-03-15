@@ -3,9 +3,15 @@
 func get_movement_command(_character: Character, _delta: float) -> MovementCommand:
     return null
 
-class MovementCommand extends RefCounted:
+func get_action_command(_character: Character, _delta: float) -> ActionCommand:
+    return null
 
+class MovementCommand extends RefCounted:
     var forward_input := 0.0
     var lateral_input := 0.0
     var turn_input := 0.0
     var jump_pressed := false
+
+class ActionCommand extends RefCounted:
+    var attack : Character = null
+    var select : Character = null

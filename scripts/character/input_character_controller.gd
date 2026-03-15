@@ -40,6 +40,14 @@ func get_movement_command(_character: Character, _delta: float) -> MovementComma
     command.jump_pressed = Input.is_action_just_pressed(JUMP_ACTION)
     return command
 
+func get_action_command(_character: Character, _delta: float) -> ActionCommand:
+    var command := ActionCommand.new()
+    if _hovered_character != null and (Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)):
+        command.select = _hovered_character
+        if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+            command.attack = _hovered_character
+    return command
+
 func set_strafe_mode(enabled: bool) -> void:
     _strafe_mode = enabled
 
