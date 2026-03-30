@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AbilityLibrary" format=3 uid="uid://de53paqhj8xks"]
+
+[ext_resource type="Script" uid="uid://byaorjdrfbr1t" path="res://systems/combat/ability_library.gd" id="1_lib"]
+[ext_resource type="Script" uid="uid://gs72c3djb5ph" path="res://systems/combat/ability_resource.gd" id="2_ability"]
+[ext_resource type="PackedScene" uid="uid://cnrbjt3byyd0" path="res://systems/combat/melee_ability.tscn" id="3_scene"]
+
+[sub_resource type="Resource" id="Resource_melee"]
+script = ExtResource("2_ability")
+id = "melee"
+cooldown = 0.5
+handler_scene = ExtResource("3_scene")
+
+[resource]
+script = ExtResource("1_lib")
+abilities = Array[ExtResource("2_ability")]([SubResource("Resource_melee")])

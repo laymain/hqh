@@ -8,8 +8,6 @@ uniform float backlight_strength : hint_range(0.0, 4.0) = 1.0;
 uniform float alpha_cutoff : hint_range(0.0, 1.0) = 0.01;
 
 #include "billboard.gdshaderinc"
-#include "hovering.gdshaderinc"
-
 void vertex() {
     VERTEX = get_billboard_vertex(VERTEX, MODEL_MATRIX, VIEW_MATRIX);
     NORMAL = vec3(0.0, 0.0, 1.0);
@@ -17,7 +15,6 @@ void vertex() {
 
 void fragment() {
     vec4 tex = texture(albedo_tex, UV) * albedo_color;
-    tex = get_hovering_texture(tex, UV, albedo_tex);
     ALBEDO = tex.rgb;
     ALPHA = tex.a;
     ALPHA_SCISSOR_THRESHOLD = alpha_cutoff;

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CharacterStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://systems/stats/character_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+max_health = 100.0
+base_power = 15.0
+crit_chance = 0.1
+crit_multiplier = 1.5
+move_speed = 7.5
+acceleration = 28.0
+deceleration = 32.0
+turn_speed = 10.0
+jump_velocity = 5.0
+gravity_enabled = true
+character_name = "Player Hero"
+abilities = ["melee"]

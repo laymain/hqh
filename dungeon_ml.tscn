@@ -1,6 +1,6 @@
-[gd_scene format=4 uid="uid://drm2t1c2h0iqa"]
+[gd_scene format=4]
 
-[ext_resource type="Texture2D" uid="uid://jotu8mud2ur1" path="res://assets/dungeon/Textures/colormap.png" id="4_t3mag"]
+[ext_resource type="Texture2D" path="res://assets/dungeon/Textures/colormap.png" id="4_t3mag"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ads55"]
 resource_name = "colormap"

@@ -54,13 +54,13 @@ flowchart TD
     Input -->|Trigger| Combat
     Combat -->|Read| StatsRes
     Combat -->|Read| AbilityRes
-    
+
     Combat -->|Instantiate| Payload
-    
+
     Payload -->|1. handle_incoming| Defense
     Defense -->|2. mitigate_amount| Payload
     Defense -->|3. apply_final_damage| Health
-    
+
     Health -->|Signal: health_changed| UI[UI/Feedback]
 ```
 
@@ -191,9 +191,41 @@ To ensure long-term maintainability for a solo developer, all contributors (huma
 ### **E. Resource-First Data**
 *   **Mandatory:** If a value can be tweaked for balance (speed, damage, cooldown), it belongs in a `Resource`, not hardcoded in a script.
 
+### **F. Pragmatic Engineering**
+*   **Principle:** Prioritize progress over perfect abstraction.
+*   **YAGNI (You Ain't Gonna Need It):** Do not build complex systems (e.g., multi-layered pooling, advanced serialization) until the game actually requires them.
+*   **Open-Closed Principle:** Design systems so they are **Open** for extension (via components/signals) but **Closed** for modification. If you have to rewrite a core orchestrator to add one feature, the abstraction has failed.
+*   **Pragmatism:** If a single script slightly violates SRP but is not a bottleneck for development or performance, keep it. Ensure the structure *allows* for a split later without a total rewrite.
+
 ---
 
-## 9. Multiplayer Readiness (Future-Proofing)
+## 9. Naming Conventions
+
+All GDScript code must follow the official [Godot GDScript style guide](https://docs.godotengine.org/en/stable/tutorials/scripting/gdscript/gdscript_styleguide.html).
+
+| Construct | Convention | Example |
+|---|---|---|
+| Class | `PascalCase` | `class_name HealthComponent` |
+| Variable (public) | `snake_case` | `var current_health: float` |
+| Variable (private) | `_snake_case` | `var _cooldowns: Array[float]` |
+| Function (public) | `snake_case` | `func apply_damage(...)` |
+| Function (private) | `_snake_case` | `func _roll_damage(...)` |
+| Parameter | `snake_case` | `func setup(character: Character)` |
+| Constant | `SCREAMING_SNAKE_CASE` | `const MAX_STACKS = 5` |
+| Signal | `snake_case` | `signal health_changed(...)` |
+| Enum name | `PascalCase` | `enum DamageType` |
+| Enum value | `SCREAMING_SNAKE_CASE` | `PHYSICAL, FIRE` |
+
+### **Key Rules**
+*   **No prefixes on parameters — except in constructors.** Use `p_name` in `_init()` only, to avoid shadowing class fields. Never use it in regular functions.
+*   **`_` prefix = private.** Applies to fields and methods not meant to be accessed from outside the class.
+*   **`_` on unused parameters only.** Prefix a parameter with `_` exclusively to suppress the "unused variable" warning (e.g. `_delta`). Do not use it on parameters that are actually used.
+*   **Avoid shadowing Godot built-ins.** Never use `owner`, `name`, `position`, `rotation`, etc. as field or parameter names — they shadow `Node` properties and cause confusion. Prefer semantically precise names (e.g. `caster` instead of `owner`).
+*   **Self-qualify shadowed fields.** When a parameter name matches a field name in `_init()` or `setup()`, use `self.field = field` rather than renaming either side.
+
+---
+
+## 10. Multiplayer Readiness (Future-Proofing)
 
 While currently single-player, the architecture is designed to transition to Godot’s high-level multiplayer API without a total rewrite.
 
@@ -206,7 +238,7 @@ While currently single-player, the architecture is designed to transition to God
 *   **Requirement:** All "Messenger" objects must include `to_dict()` and `from_dict()` methods to allow them to be sent as simple arrays or dictionaries over the network.
 
 ### **C. RPC Call-Sites**
-*   The `CombatComponent` is the designated entry point for attack requests. To add multiplayer, the initial attack trigger would be wrapped in a `.rpc()` call, moving the calculation from the local machine to the server.
+*   The `AbilityComponent` is the designated entry point for ability execution. To add multiplayer, the initial trigger would be wrapped in a `.rpc()` call, moving the calculation from the local machine to the server.
 
 
 

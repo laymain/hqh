@@ -1,0 +1,134 @@
+[gd_scene format=3 uid="uid://bairacbilxu7"]
+
+[ext_resource type="Script" uid="uid://2ase04gwxpho" path="res://actors/base/character.gd" id="1_oprov"]
+[ext_resource type="Resource" path="res://systems/stats/enemy_stats.tres" id="2_i6yqm"]
+[ext_resource type="Shader" uid="uid://geq7jsoxllg5" path="res://shaders/character.gdshader" id="2_rkk0s"]
+[ext_resource type="Resource" path="res://systems/combat/abilities.tres" id="3_e6qfo"]
+[ext_resource type="Texture2D" uid="uid://d10cn5c08c5rh" path="res://assets/character/enemy.png" id="3_oprov"]
+[ext_resource type="Script" uid="uid://c7pho65f0upkm" path="res://systems/combat/ability_component.gd" id="4_3auu0"]
+[ext_resource type="Script" uid="uid://croq8fnv10mge" path="res://systems/movement/movement_component.gd" id="5_m2o04"]
+[ext_resource type="Script" uid="uid://ccxtxc1ws1xvi" path="res://systems/combat/health_component.gd" id="6_16w0n"]
+[ext_resource type="Script" uid="uid://bejh0n0p2au7d" path="res://systems/combat/defense_component.gd" id="7_d0x6q"]
+[ext_resource type="Script" uid="uid://cr7yk0gu8yqln" path="res://systems/combat/attack_component.gd" id="8_vj65d"]
+[ext_resource type="Script" uid="uid://cakqgce3tjvh6" path="res://actors/base/character_visuals.gd" id="9_vjuf2"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_1y732"]
+render_priority = 0
+shader = ExtResource("2_rkk0s")
+shader_parameter/albedo_tex = ExtResource("3_oprov")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/backlight_color = Color(1, 1, 1, 1)
+shader_parameter/backlight_strength = 1.0
+shader_parameter/alpha_cutoff = 0.01
+shader_parameter/rotation = 0.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_xcxqt"]
+atlas = ExtResource("3_oprov")
+region = Rect2(0, 0, 16, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rkk0s"]
+atlas = ExtResource("3_oprov")
+region = Rect2(0, 24, 16, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_hlhy5"]
+atlas = ExtResource("3_oprov")
+region = Rect2(16, 24, 16, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_dor4d"]
+atlas = ExtResource("3_oprov")
+region = Rect2(32, 24, 16, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3auu0"]
+atlas = ExtResource("3_oprov")
+region = Rect2(48, 24, 16, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_cxtd4"]
+atlas = ExtResource("3_oprov")
+region = Rect2(0, 48, 16, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_l0civ"]
+atlas = ExtResource("3_oprov")
+region = Rect2(16, 48, 16, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3ks43"]
+atlas = ExtResource("3_oprov")
+region = Rect2(32, 48, 16, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_x8jvr"]
+atlas = ExtResource("3_oprov")
+region = Rect2(48, 48, 16, 24)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_efxa6"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_xcxqt")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_rkk0s")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_hlhy5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_dor4d")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3auu0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_cxtd4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_l0civ")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3ks43")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_x8jvr")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 5.0
+}]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_7mycd"]
+radius = 0.3
+height = 0.8
+
+[node name="Character" type="CharacterBody3D" unique_id=621755490]
+input_ray_pickable = false
+script = ExtResource("1_oprov")
+stats = ExtResource("2_i6yqm")
+ability_library = ExtResource("3_e6qfo")
+
+[node name="AnimatedSprite3D" type="AnimatedSprite3D" parent="." unique_id=1182409621]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0)
+material_override = SubResource("ShaderMaterial_1y732")
+texture_filter = 0
+sprite_frames = SubResource("SpriteFrames_efxa6")
+animation = &"idle"
+autoplay = "idle"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=696930574]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+shape = SubResource("CapsuleShape3D_7mycd")
+
+[node name="CharacterVisuals" type="Node" parent="." unique_id=709505483]
+script = ExtResource("9_vjuf2")
+
+[node name="AbilityComponent" type="Node" parent="." unique_id=512645704]
+script = ExtResource("4_3auu0")
+
+[node name="AttackComponent" type="Node" parent="." unique_id=100000003]
+script = ExtResource("8_vj65d")
+
+[node name="DefenseComponent" type="Node" parent="." unique_id=100000002]
+script = ExtResource("7_d0x6q")
+
+[node name="HealthComponent" type="Node" parent="." unique_id=100000001]
+script = ExtResource("6_16w0n")
+
+[node name="MovementComponent" type="Node" parent="." unique_id=100000000]
+script = ExtResource("5_m2o04")

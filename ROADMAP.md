@@ -6,17 +6,18 @@ This roadmap outlines the long-term vision for *Guild of Highly Questionable Her
 
 ## 🟢 Milestone 1: The SOLID Core (Foundation)
 *Goal: Move from "prototype code" to a scalable system where adding a new hero takes minutes.*
-- [ ] **Data-Driven DNA:** Implement `CharacterStats` resources to replace hardcoded exports.
-- [ ] **The Messenger Layer:** Implement `DamageInfo` payloads for all combat interactions.
-- [ ] **Body Layer (Components):** Extract `Health`, `Combat`, and `Defense` logic into reusable nodes.
-- [ ] **Unified Orchestrator:** Refactor `Character.gd` to act as a pure component coordinator.
-- [ ] **Command Interface:** Standardize the `CharacterController` to handle Player and AI inputs identically.
+- [x] **Data-Driven DNA:** Implement `CharacterStats` resources to replace hardcoded exports.
+- [x] **The Messenger Layer:** Implement `DamageInfo` payloads for all combat interactions.
+- [x] **Body Layer (Components):** Extract `Health`, `Combat`, and `Defense` logic into reusable nodes.
+- [x] **Unified Orchestrator:** Refactor `Character.gd` to act as a pure component coordinator.
+- [x] **Command Interface:** Standardize the `CharacterController` to handle Player and AI inputs identically.
+- [x] **MOBA Aiming:** Decoupled movement and facing direction for action-oriented feel.
 
 ## 🟡 Milestone 2: Tactical Combat & Mitigation
 *Goal: Implement the deep, layered math and comedic modifiers.*
-- [ ] **Layered Defense:** Implementation of **Dodge → Barrier → Armor → Health** logic.
+- [ ] **Layered Defense:** Implementation of **Dodge → Barrier → Armor → Health** logic in `DefenseComponent`.
 - [ ] **The Interceptor System:** Create a synchronous `PerkRegistry` for complex modifiers (e.g., *"Certified Fire Inspector"*).
-- [ ] **Authority Isolation:** Decouple all visual feedback (Floating Text, Shakes, SFX) from game logic.
+- [ ] **Authority Isolation:** Decouple all visual feedback (Floating Text, Shakes, SFX) from game logic (Currently partially done in `CharacterVisuals`).
 - [ ] **Status Effect System:** Implement duration-based and stacking debuffs (Bleed, Burn, Bureaucratic Delay).
 
 ## 🟠 Milestone 3: The Dungeon Loop
@@ -35,5 +36,5 @@ This roadmap outlines the long-term vision for *Guild of Highly Questionable Her
 
 ---
 
-## Current Status: 🏗️ Milestone 1 in Progress
-*Next Step: Implement `DamageInfo` and `CharacterStats` resources.*
+## Current Status: 🏗️ Milestone 2 Starting
+*Next Step: Implement Layered Mitigation (Dodge/Barrier/Armor) in DefenseComponent.*
