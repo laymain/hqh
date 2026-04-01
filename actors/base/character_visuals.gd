@@ -27,11 +27,15 @@ func _on_health_changed(amount: float, _current: float, _max: float) -> void:
     else:
         _spawn_floating_text(amount, Color.GREEN)
 
+signal death_visuals_finished
+
 func _on_died() -> void:
     if _sprite:
         var tween := create_tween()
         tween.tween_property(_sprite, "modulate:a", 0.0, 0.5)
-        tween.finished.connect(func(): get_parent().queue_free())
+        tween.finished.connect(func(): death_visuals_finished.emit())
+    else:
+        death_visuals_finished.emit()
 
 func _on_ability_activated(_ability: AbilityResource, _aim_pos: Vector3) -> void:
     # Basic animation trigger placeholder

@@ -1,14 +1,14 @@
 class_name InputCharacterController extends CharacterController
 
-const MOVE_FORWARD_ACTION := "move_forward"
-const MOVE_BACK_ACTION := "move_back"
-const MOVE_LEFT_ACTION := "move_left"
-const MOVE_RIGHT_ACTION := "move_right"
-const JUMP_ACTION := "jump"
-const ABILITY_0_ACTION := "ability_0"
-const ABILITY_1_ACTION := "ability_1"
-const ABILITY_2_ACTION := "ability_2"
-const ABILITY_3_ACTION := "ability_3"
+const MOVE_FORWARD_ACTION := &"move_forward"
+const MOVE_BACK_ACTION := &"move_back"
+const MOVE_LEFT_ACTION := &"move_left"
+const MOVE_RIGHT_ACTION := &"move_right"
+const JUMP_ACTION := &"jump"
+const ABILITY_0_ACTION := &"ability_0"
+const ABILITY_1_ACTION := &"ability_1"
+const ABILITY_2_ACTION := &"ability_2"
+const ABILITY_3_ACTION := &"ability_3"
 
 @export var camera : FollowingCamera = null
 
@@ -65,11 +65,16 @@ func _perform_mouse_raycast() -> Dictionary:
         return {}
 
     var mouse_pos := get_viewport().get_mouse_position()
-    var from := cam.project_ray_origin(mouse_pos)
-    var to := from + cam.project_ray_normal(mouse_pos) * 1000.0
+    var origin := cam.project_ray_origin(mouse_pos)
+    var dir := cam.project_ray_normal(mouse_pos)
 
-    var query := PhysicsRayQueryParameters3D.create(from, to)
-    return get_viewport().world_3d.direct_space_state.intersect_ray(query)
+    if abs(dir.y) < 0.001:
+        return {}
+    var t := -origin.y / dir.y
+    if t < 0.0:
+        return {}
+
+    return {"position": origin + dir * t}
 
 # ------------------------------------------------------------------------------
 # 4. Input Configuration (Boilerplate)

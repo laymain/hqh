@@ -18,3 +18,7 @@ mono_crash.*.json
 # IDE
 .idea/
 .vscode/
+
+# AI
+.claude
+!.claude/memory

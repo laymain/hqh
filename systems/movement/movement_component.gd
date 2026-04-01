@@ -1,43 +1,41 @@
 class_name MovementComponent extends Node
 
-var _stats: CharacterStats
-var _body: CharacterBody3D
+var _character: Character
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
-func setup(body: CharacterBody3D, stats: CharacterStats) -> void:
-    _body = body
-    _stats = stats
+func setup(character: Character) -> void:
+    _character = character
 
 func _physics_process(delta: float) -> void:
-    if not _body or not _stats: return
+    if not _character: return
 
-    if _stats.gravity_enabled and not _body.is_on_floor():
-        _body.velocity.y -= _gravity * delta
+    if _character.stats.gravity_enabled and not _character.is_on_floor():
+        _character.velocity.y -= _gravity * delta
 
-    _body.move_and_slide()
+    _character.move_and_slide()
 
-func handle_movement(move_cmd: CharacterController.MovementCommand, delta: float) -> void:
-    if not _body or not _stats: return
+func handle_movement(move_cmd: CharacterController.MovementCommand, delta: float, speed_multiplier: float = 1.0) -> void:
+    if not _character: return
 
     var move_direction := Vector3(move_cmd.lateral_input, 0.0, -move_cmd.forward_input).normalized()
-    var horizontal_velocity := Vector3(_body.velocity.x, 0.0, _body.velocity.z)
+    var horizontal_velocity := Vector3(_character.velocity.x, 0.0, _character.velocity.z)
 
     if move_direction == Vector3.ZERO:
-        horizontal_velocity = horizontal_velocity.move_toward(Vector3.ZERO, _stats.deceleration * delta)
+        horizontal_velocity = horizontal_velocity.move_toward(Vector3.ZERO, _character.stats.deceleration * delta)
     else:
-        horizontal_velocity = horizontal_velocity.move_toward(move_direction * _stats.move_speed, _stats.acceleration * delta)
+        horizontal_velocity = horizontal_velocity.move_toward(move_direction * _character.stats.move_speed * speed_multiplier, _character.stats.acceleration * delta)
 
-    _body.velocity.x = horizontal_velocity.x
-    _body.velocity.z = horizontal_velocity.z
+    _character.velocity.x = horizontal_velocity.x
+    _character.velocity.z = horizontal_velocity.z
 
-    if move_cmd.jump_pressed and _body.is_on_floor():
-        _body.velocity.y = _stats.jump_velocity
+    if move_cmd.jump_pressed and _character.is_on_floor():
+        _character.velocity.y = _character.stats.jump_velocity
 
 func handle_aiming(aim_pos: Vector3, delta: float) -> void:
-    if not _body or not _stats: return
+    if not _character: return
 
-    var look_target := Vector3(aim_pos.x, _body.global_position.y, aim_pos.z)
-    if _body.global_position.distance_squared_to(look_target) > 0.1:
-        var look_direction := (look_target - _body.global_position).normalized()
+    var look_target := Vector3(aim_pos.x, _character.global_position.y, aim_pos.z)
+    if _character.global_position.distance_squared_to(look_target) > 0.1:
+        var look_direction := (look_target - _character.global_position).normalized()
         var target_basis := Basis.looking_at(look_direction)
-        _body.basis = _body.basis.slerp(target_basis, _stats.turn_speed * delta)
+        _character.basis = _character.basis.slerp(target_basis, _character.stats.turn_speed * delta)

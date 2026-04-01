@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="hqh"
-run/main_scene="uid://ckfgtbd0vhb4s"
+run/main_scene="uid://bvqjp3i8awe3s"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
 
@@ -24,6 +24,12 @@ mouse_cursor/custom_image="uid://bapb2apu3w61s"
 texture={
 &"process/fix_alpha_border": false
 }
+
+[layer_names]
+
+3d_physics/layer_1="world"
+3d_physics/layer_2="player"
+3d_physics/layer_3="enemies"
 
 [physics]
 

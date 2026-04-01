@@ -20,8 +20,9 @@ func _ready() -> void:
     attack.setup(self)
     defense.setup(self)
     health.setup(self)
-    movement.setup(self, stats)
+    movement.setup(self)
     visuals.setup(health, abilities)
+    visuals.death_visuals_finished.connect(queue_free)
 
     _damage_pipeline = [
         defense,
@@ -36,15 +37,18 @@ func handle_hit(info: DamageInfo) -> void:
 
 func _physics_process(delta: float) -> void:
     if health.is_dead: return
-    if not controller: 
+    if not controller:
         return
 
     var move_cmd := controller.get_movement_command(self, delta)
     var act_cmd := controller.get_action_command(self, delta)
     if not move_cmd or not act_cmd: return
-    
-    movement.handle_aiming(act_cmd.aim_position, delta)
-    movement.handle_movement(move_cmd, delta)
 
     for slot in act_cmd.pressed_slots:
         abilities.execute(slot, act_cmd.aim_position)
+
+    if not abilities.is_casting and not abilities.is_buffered:
+        movement.handle_aiming(act_cmd.aim_position, delta)
+        movement.handle_movement(move_cmd, delta)
+    else:
+        movement.handle_movement(move_cmd, delta, 0.4)

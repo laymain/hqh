@@ -7,6 +7,7 @@ func get_action_command(_character: Character, _delta: float) -> ActionCommand:
     return null
 
 class MovementCommand extends RefCounted:
+    static var NONE := MovementCommand.new()
     var forward_input := 0.0
     var lateral_input := 0.0
     var jump_pressed := false

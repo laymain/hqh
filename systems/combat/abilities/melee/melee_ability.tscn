@@ -1,0 +1,134 @@
+[gd_scene format=3 uid="uid://cnrbjt3byyd0"]
+
+[ext_resource type="Script" uid="uid://qsx0i6xl2x35" path="res://systems/combat/abilities/melee/melee_ability.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://bev4b8mi71krh" path="res://assets/vfx/melee_attack.png" id="2_texture"]
+[ext_resource type="Shader" uid="uid://ck47mp5o75dae" path="res://shaders/vfx_sprite.gdshader" id="3_shader"]
+
+[sub_resource type="Animation" id="Animation_qd0dr"]
+resource_name = "attack_high"
+length = 1.2
+tracks/0/type = "method"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0.25),
+"transitions": PackedFloat32Array(1),
+"values": [{
+"args": [],
+"method": &"_on_attack_frame"
+}]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("VfxSprite:frame")
+tracks/1/interp = 1
+tracks/1/loop_wrap = false
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.15, 0.2, 0.4),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 1,
+"values": [5, 6, 7, 8, 9]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("VfxSprite:visible")
+tracks/2/interp = 1
+tracks/2/loop_wrap = false
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.6),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [true, false]
+}
+
+[sub_resource type="Animation" id="Animation_attack"]
+resource_name = "attack_low"
+length = 0.6
+tracks/0/type = "method"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0.25),
+"transitions": PackedFloat32Array(1),
+"values": [{
+"args": [],
+"method": &"_on_attack_frame"
+}]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("VfxSprite:frame")
+tracks/1/interp = 1
+tracks/1/loop_wrap = false
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.15, 0.2, 0.4),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 1,
+"values": [0, 1, 2, 3, 4]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("VfxSprite:visible")
+tracks/2/interp = 1
+tracks/2/loop_wrap = false
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.6),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [true, false]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_1"]
+_data = {
+&"attack_high": SubResource("Animation_qd0dr"),
+&"attack_low": SubResource("Animation_attack")
+}
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(0.64, 1, 1.92)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_vfx"]
+render_priority = 0
+shader = ExtResource("3_shader")
+shader_parameter/albedo_tex = ExtResource("2_texture")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/alpha_cutoff = 0.01
+shader_parameter/rotation = 0.0
+shader_parameter/billboard_enabled = true
+
+[node name="MeleeAbility" type="Node3D" unique_id=1409726837]
+script = ExtResource("1_script")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1919099400]
+libraries/ = SubResource("AnimationLibrary_1")
+
+[node name="Area3D" type="Area3D" parent="." unique_id=320396]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, -0.8)
+collision_layer = 0
+collision_mask = 0
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" unique_id=818667292]
+shape = SubResource("BoxShape3D_1")
+
+[node name="VfxSprite" type="Sprite3D" parent="." unique_id=554312701]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, -0.4, -0.8)
+visible = false
+material_override = SubResource("ShaderMaterial_vfx")
+pixel_size = 0.04
+shaded = true
+render_priority = 100
+texture = ExtResource("2_texture")
+hframes = 5
+vframes = 2

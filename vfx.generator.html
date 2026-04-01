@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Slash VFX Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #16213e, #0f3460);
+            padding: 20px 30px;
+            border-bottom: 2px solid #e94560;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .app-header h1 {
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        .app-header span {
+            color: #e94560;
+        }
+
+        .main-layout {
+            display: flex;
+            min-height: calc(100vh - 75px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            min-width: 320px;
+            background: #16213e;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 75px);
+            border-right: 1px solid #0f3460;
+        }
+
+        .panel {
+            background: #1a1a2e;
+            border: 1px solid #0f3460;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #e94560;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .control-group {
+            margin-bottom: 10px;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #a0a0b0;
+            margin-bottom: 4px;
+        }
+
+        .control-group label .value {
+            color: #e94560;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #0f3460;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #e94560;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #e94560;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none;
+            width: 40px;
+            height: 28px;
+            border: 2px solid #0f3460;
+            border-radius: 4px;
+            cursor: pointer;
+            background: none;
+            padding: 2px;
+        }
+
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 2px;
+        }
+
+        .color-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .color-row label {
+            font-size: 0.8rem;
+            color: #a0a0b0;
+            min-width: 70px;
+        }
+
+        select {
+            width: 100%;
+            padding: 6px 10px;
+            background: #0f3460;
+            color: #e0e0e0;
+            border: 1px solid #1a1a2e;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            accent-color: #e94560;
+            width: 16px;
+            height: 16px;
+        }
+
+        .checkbox-row label {
+            font-size: 0.8rem;
+            color: #a0a0b0;
+            cursor: pointer;
+        }
+
+        /* Content area */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 75px);
+        }
+
+        /* Preview section */
+        .preview-section {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .preview-box {
+            background: #111;
+            border: 2px solid #0f3460;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .preview-box h3 {
+            font-size: 0.8rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .preview-canvas-wrap {
+            background: repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 50% / 16px 16px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-canvas-wrap canvas {
+            image-rendering: pixelated;
+        }
+
+        /* Playback controls */
+        .playback-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .playback-controls button {
+            padding: 6px 14px;
+            background: #0f3460;
+            color: #e0e0e0;
+            border: 1px solid #e94560;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .playback-controls button:hover {
+            background: #e94560;
+            color: #fff;
+        }
+
+        .playback-controls button.active {
+            background: #e94560;
+            color: #fff;
+        }
+
+        .frame-indicator {
+            font-family: monospace;
+            color: #e94560;
+            font-size: 0.85rem;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        /* Spritesheet section */
+        .spritesheet-section {
+            background: #16213e;
+            border: 1px solid #0f3460;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .spritesheet-section h3 {
+            font-size: 0.9rem;
+            color: #e94560;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .spritesheet-preview {
+            background: repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 50% / 16px 16px;
+            border-radius: 4px;
+            padding: 10px;
+            overflow-x: auto;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .spritesheet-preview canvas {
+            image-rendering: pixelated;
+            max-width: 100%;
+        }
+
+        .export-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .export-btn {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #e94560, #c23152);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+        }
+
+        .export-info {
+            font-size: 0.8rem;
+            color: #666;
+            font-family: monospace;
+        }
+
+        /* Presets */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .preset-btn {
+            padding: 8px;
+            background: #0f3460;
+            color: #e0e0e0;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .preset-btn:hover {
+            border-color: #e94560;
+            background: #1a1a2e;
+        }
+
+        .preset-btn.active {
+            border-color: #e94560;
+            background: #e94560;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-header">
+        <h1>⚔️ Pixel <span>Slash</span> VFX Generator</h1>
+    </div>
+
+    <div class="main-layout">
+        <!-- Sidebar Controls -->
+        <div class="sidebar">
+            <!-- Presets -->
+            <div class="panel">
+                <div class="panel-title">⚡ Presets</div>
+                <div class="preset-grid">
+                    <button class="preset-btn active" onclick="applyPreset('classic')">Classic Slash</button>
+                    <button class="preset-btn" onclick="applyPreset('fire')">🔥 Fire Slash</button>
+                    <button class="preset-btn" onclick="applyPreset('ice')">❄️ Ice Slash</button>
+                    <button class="preset-btn" onclick="applyPreset('electric')">⚡ Electric</button>
+                    <button class="preset-btn" onclick="applyPreset('dark')">🌑 Dark Slash</button>
+                    <button class="preset-btn" onclick="applyPreset('holy')">✨ Holy Slash</button>
+                    <button class="preset-btn" onclick="applyPreset('wind')">🌪️ Wind Slash</button>
+                    <button class="preset-btn" onclick="applyPreset('blood')">🩸 Blood Slash</button>
+                    <button class="preset-btn" onclick="applyPreset('punchH')">👊 Punch Horiz</button>
+                </div>
+            </div>
+
+            <!-- Canvas Settings -->
+            <div class="panel">
+                <div class="panel-title">📐 Canvas</div>
+                <div class="control-group">
+                    <label>Frame Size <span class="value" id="val-frameSize">64</span>px</label>
+                    <input type="range" id="frameSize" min="16" max="256" step="16" value="64">
+                </div>
+                <div class="control-group">
+                    <label>Frames <span class="value" id="val-frameCount">8</span></label>
+                    <input type="range" id="frameCount" min="3" max="20" value="8">
+                </div>
+                <div class="control-group">
+                    <label>FPS <span class="value" id="val-fps">12</span></label>
+                    <input type="range" id="fps" min="4" max="30" value="12">
+                </div>
+                <div class="control-group">
+                    <label>Export Scale <span class="value" id="val-exportScale">1</span>x</label>
+                    <input type="range" id="exportScale" min="1" max="8" value="1">
+                </div>
+            </div>
+
+            <!-- Slash Shape -->
+            <div class="panel">
+                <div class="panel-title">🗡️ Slash Shape</div>
+                <div class="control-group">
+                    <label>Slash Type</label>
+                    <select id="slashType">
+                        <option value="arc">Arc / Crescent</option>
+                        <option value="straight">Straight Line</option>
+                        <option value="cross">Cross / X-Slash</option>
+                        <option value="spin">Full Spin</option>
+                        <option value="stab">Stab / Thrust</option>
+                        <option value="punch">Punch / Impact</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Angle <span class="value" id="val-angle">-45</span>°</label>
+                    <input type="range" id="angle" min="-180" max="180" value="-45">
+                </div>
+                <div class="control-group">
+                    <label>Arc Sweep <span class="value" id="val-sweep">150</span>°</label>
+                    <input type="range" id="sweep" min="30" max="350" value="150">
+                </div>
+                <div class="control-group">
+                    <label>Radius <span class="value" id="val-radius">70</span>%</label>
+                    <input type="range" id="radius" min="20" max="100" value="70">
+                </div>
+                <div class="control-group">
+                    <label>Thickness <span class="value" id="val-thickness">40</span>%</label>
+                    <input type="range" id="thickness" min="5" max="80" value="40">
+                </div>
+                <div class="control-group">
+                    <label>Offset X <span class="value" id="val-offsetX">0</span>%</label>
+                    <input type="range" id="offsetX" min="-50" max="50" value="0">
+                </div>
+                <div class="control-group">
+                    <label>Offset Y <span class="value" id="val-offsetY">0</span>%</label>
+                    <input type="range" id="offsetY" min="-50" max="50" value="0">
+                </div>
+            </div>
+
+            <!-- Colors -->
+            <div class="panel">
+                <div class="panel-title">🎨 Colors</div>
+                <div class="color-row" style="margin-bottom: 8px;">
+                    <label>Core</label>
+                    <input type="color" id="colorCore" value="#ffffff">
+                </div>
+                <div class="color-row" style="margin-bottom: 8px;">
+                    <label>Edge</label>
+                    <input type="color" id="colorEdge" value="#88ccff">
+                </div>
+                <div class="color-row" style="margin-bottom: 8px;">
+                    <label>Glow</label>
+                    <input type="color" id="colorGlow" value="#4488ff">
+                </div>
+            </div>
+
+            <!-- Effects -->
+            <div class="panel">
+                <div class="panel-title">✨ Effects</div>
+                <div class="control-group">
+                    <label>Glow Intensity <span class="value" id="val-glowIntensity">50</span>%</label>
+                    <input type="range" id="glowIntensity" min="0" max="100" value="50">
+                </div>
+                <div class="control-group">
+                    <label>Glow Size <span class="value" id="val-glowSize">40</span>%</label>
+                    <input type="range" id="glowSize" min="0" max="100" value="40">
+                </div>
+                <div class="control-group">
+                    <label>Trail Length <span class="value" id="val-trailLength">30</span>%</label>
+                    <input type="range" id="trailLength" min="0" max="100" value="30">
+                </div>
+                <div class="control-group">
+                    <label>Particles <span class="value" id="val-particles">5</span></label>
+                    <input type="range" id="particles" min="0" max="30" value="5">
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="pixelSnap" checked>
+                    <label for="pixelSnap">Pixel Snap (crisp edges)</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="taperEdges" checked>
+                    <label for="taperEdges">Taper Edges</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="smear" checked>
+                    <label for="smear">Motion Smear</label>
+                </div>
+            </div>
+
+            <!-- Timing -->
+            <div class="panel">
+                <div class="panel-title">⏱️ Timing</div>
+                <div class="control-group">
+                    <label>Attack (grow) <span class="value" id="val-attackPhase">30</span>%</label>
+                    <input type="range" id="attackPhase" min="10" max="60" value="30">
+                </div>
+                <div class="control-group">
+                    <label>Sustain (hold) <span class="value" id="val-sustainPhase">20</span>%</label>
+                    <input type="range" id="sustainPhase" min="0" max="50" value="20">
+                </div>
+                <div class="control-group">
+                    <label>Decay (fade) <span class="value" id="val-decayPhase">50</span>%</label>
+                    <input type="range" id="decayPhase" min="10" max="80" value="50">
+                </div>
+                <div class="control-group">
+                    <label>Easing</label>
+                    <select id="easing">
+                        <option value="easeOut">Ease Out (fast start)</option>
+                        <option value="easeIn">Ease In (slow start)</option>
+                        <option value="easeInOut">Ease In-Out</option>
+                        <option value="linear">Linear</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Preview -->
+            <div class="preview-section">
+                <div class="preview-box">
+                    <h3>Animation Preview</h3>
+                    <div class="preview-canvas-wrap">
+                        <canvas id="previewCanvas" width="192" height="192"></canvas>
+                    </div>
+                    <div class="playback-controls">
+                        <button id="btnPlay" class="active" onclick="togglePlay()">▶ Play</button>
+                        <button onclick="stepPrev()">◀</button>
+                        <button onclick="stepNext()">▶</button>
+                        <span class="frame-indicator" id="frameIndicator">1 / 8</span>
+                    </div>
+                </div>
+                <div class="preview-box" style="flex:1; min-width: 0;">
+                    <h3>Individual Frames</h3>
+                    <div id="framesGrid" style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;"></div>
+                </div>
+            </div>
+
+            <!-- Spritesheet -->
+            <div class="spritesheet-section">
+                <h3>📦 Sprite Sheet</h3>
+                <div class="spritesheet-preview">
+                    <canvas id="spritesheetCanvas"></canvas>
+                </div>
+                <div class="export-row">
+                    <button class="export-btn" onclick="exportSpritesheet()">
+                        💾 Export PNG Spritesheet
+                    </button>
+                    <button class="export-btn" style="background: linear-gradient(135deg, #0f3460, #16213e);" onclick="exportGif()">
+                        🎞️ Export GIF
+                    </button>
+                    <span class="export-info" id="exportInfo">64×64 × 8 frames = 512×64</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        //  STATE
+        // ============================================================
+        let frames = [];
+        let playing = true;
+        let currentFrame = 0;
+        let animTimer = null;
+        let particleSeed = 1;
+
+        // Simple seeded RNG for consistent particles per frame
+        function seededRandom(seed) {
+            let s = seed;
+            return function () {
+                s = (s * 16807 + 0) % 2147483647;
+                return (s - 1) / 2147483646;
+            };
+        }
+
+        // ============================================================
+        //  PARAMS HELPERS
+        // ============================================================
+        function getParams() {
+            return {
+                frameSize: +document.getElementById('frameSize').value,
+                frameCount: +document.getElementById('frameCount').value,
+                fps: +document.getElementById('fps').value,
+                exportScale: +document.getElementById('exportScale').value,
+                slashType: document.getElementById('slashType').value,
+                angle: +document.getElementById('angle').value,
+                sweep: +document.getElementById('sweep').value,
+                radius: +document.getElementById('radius').value / 100,
+                thickness: +document.getElementById('thickness').value / 100,
+                offsetX: +document.getElementById('offsetX').value / 100,
+                offsetY: +document.getElementById('offsetY').value / 100,
+                colorCore: document.getElementById('colorCore').value,
+                colorEdge: document.getElementById('colorEdge').value,
+                colorGlow: document.getElementById('colorGlow').value,
+                glowIntensity: +document.getElementById('glowIntensity').value / 100,
+                glowSize: +document.getElementById('glowSize').value / 100,
+                trailLength: +document.getElementById('trailLength').value / 100,
+                particles: +document.getElementById('particles').value,
+                pixelSnap: document.getElementById('pixelSnap').checked,
+                taperEdges: document.getElementById('taperEdges').checked,
+                smear: document.getElementById('smear').checked,
+                attackPhase: +document.getElementById('attackPhase').value / 100,
+                sustainPhase: +document.getElementById('sustainPhase').value / 100,
+                decayPhase: +document.getElementById('decayPhase').value / 100,
+                easing: document.getElementById('easing').value,
+            };
+        }
+
+        function hexToRgb(hex) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return { r, g, b };
+        }
+
+        // ============================================================
+        //  EASING
+        // ============================================================
+        function ease(t, type) {
+            switch (type) {
+                case 'easeIn': return t * t;
+                case 'easeOut': return 1 - (1 - t) * (1 - t);
+                case 'easeInOut': return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                default: return t;
+            }
+        }
+
+        // ============================================================
+        //  FRAME GENERATION
+        // ============================================================
+        function getPhaseProgress(frameIndex, p) {
+            const t = frameIndex / (p.frameCount - 1); // 0..1
+            const totalPhase = p.attackPhase + p.sustainPhase + p.decayPhase;
+            const attack = p.attackPhase / totalPhase;
+            const sustain = p.sustainPhase / totalPhase;
+
+            let sweepProgress, opacityMultiplier;
+
+            if (t <= attack) {
+                // Attack phase: sweep grows, opacity rises
+                const pt = ease(t / attack, p.easing);
+                sweepProgress = pt;
+                opacityMultiplier = pt;
+            } else if (t <= attack + sustain) {
+                // Sustain: full sweep, full opacity
+                sweepProgress = 1;
+                opacityMultiplier = 1;
+            } else {
+                // Decay: opacity fades
+                const pt = ease((t - attack - sustain) / (1 - attack - sustain), p.easing);
+                sweepProgress = 1;
+                opacityMultiplier = 1 - pt;
+            }
+
+            return { sweepProgress, opacityMultiplier, t };
+        }
+
+        function renderFrame(ctx, frameIndex, p) {
+            const size = p.frameSize;
+            const cx = size / 2 + size * p.offsetX;
+            const cy = size / 2 + size * p.offsetY;
+            const maxRadius = size * p.radius * 0.5;
+            const maxThick = size * p.thickness * 0.5;
+            const { sweepProgress, opacityMultiplier, t } = getPhaseProgress(frameIndex, p);
+
+            if (opacityMultiplier <= 0.01) return;
+
+            const angleRad = (p.angle * Math.PI) / 180;
+            const sweepRad = (p.sweep * Math.PI) / 180;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(angleRad);
+
+            if (p.slashType === 'arc') {
+                drawArcSlash(ctx, p, size, maxRadius, maxThick, sweepRad, sweepProgress, opacityMultiplier, frameIndex);
+            } else if (p.slashType === 'straight') {
+                drawStraightSlash(ctx, p, size, maxRadius, maxThick, sweepProgress, opacityMultiplier, frameIndex);
+            } else if (p.slashType === 'cross') {
+                drawCrossSlash(ctx, p, size, maxRadius, maxThick, sweepRad, sweepProgress, opacityMultiplier, frameIndex);
+            } else if (p.slashType === 'spin') {
+                drawSpinSlash(ctx, p, size, maxRadius, maxThick, sweepProgress, opacityMultiplier, frameIndex);
+            } else if (p.slashType === 'stab') {
+                drawStabSlash(ctx, p, size, maxRadius, maxThick, sweepProgress, opacityMultiplier, frameIndex);
+            } else if (p.slashType === 'punch') {
+                drawPunchSlash(ctx, p, size, maxRadius, maxThick, sweepProgress, opacityMultiplier, frameIndex);
+            }
+
+            // Particles
+            if (p.particles > 0 && opacityMultiplier > 0.1) {
+                drawParticles(ctx, p, size, maxRadius, sweepRad, sweepProgress, opacityMultiplier, frameIndex);
+            }
+
+            ctx.restore();
+        }
+
+        function drawArcSlash(ctx, p, size, maxRadius, maxThick, sweepRad, sweepProgress, opacity, frameIndex) {
+            const currentSweep = sweepRad * sweepProgress;
+            const startAngle = -currentSweep / 2;
+            const endAngle = currentSweep / 2;
+            const thick = maxThick * Math.min(1, sweepProgress * 2);
+
+            // Glow layer
+            if (p.glowIntensity > 0) {
+                const glowColor = hexToRgb(p.colorGlow);
+                const glowThick = thick * (1 + p.glowSize * 2);
+                ctx.beginPath();
+                ctx.arc(0, 0, maxRadius, startAngle, endAngle);
+                ctx.lineWidth = glowThick;
+                ctx.strokeStyle = `rgba(${glowColor.r},${glowColor.g},${glowColor.b},${opacity * p.glowIntensity * 0.4})`;
+                ctx.lineCap = p.taperEdges ? 'round' : 'butt';
+                ctx.stroke();
+            }
+
+            // Trail / smear layer
+            if (p.smear && sweepProgress > 0.3 && opacity > 0.2) {
+                const edgeColor = hexToRgb(p.colorEdge);
+                const trailSweep = currentSweep * (1 + p.trailLength * 0.5);
+                const trailStart = -trailSweep / 2;
+                const trailEnd = trailSweep / 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, maxRadius, trailStart, trailEnd);
+                ctx.lineWidth = thick * 0.5;
+                ctx.strokeStyle = `rgba(${edgeColor.r},${edgeColor.g},${edgeColor.b},${opacity * 0.25})`;
+                ctx.lineCap = p.taperEdges ? 'round' : 'butt';
+                ctx.stroke();
+            }
+
+            // Edge layer
+            const edgeColor = hexToRgb(p.colorEdge);
+            ctx.beginPath();
+            ctx.arc(0, 0, maxRadius, startAngle, endAngle);
+            ctx.lineWidth = thick;
+            ctx.strokeStyle = `rgba(${edgeColor.r},${edgeColor.g},${edgeColor.b},${opacity * 0.9})`;
+            ctx.lineCap = p.taperEdges ? 'round' : 'butt';
+            ctx.stroke();
+
+            // Core layer
+            const coreColor = hexToRgb(p.colorCore);
+            ctx.beginPath();
+            ctx.arc(0, 0, maxRadius, startAngle, endAngle);
+            ctx.lineWidth = thick * 0.4;
+            ctx.strokeStyle = `rgba(${coreColor.r},${coreColor.g},${coreColor.b},${opacity})`;
+            ctx.lineCap = p.taperEdges ? 'round' : 'butt';
+            ctx.stroke();
+        }
+
+        function drawStraightSlash(ctx, p, size, maxRadius, maxThick, sweepProgress, opacity, frameIndex) {
+            const len = maxRadius * 2 * sweepProgress;
+            const thick = maxThick * Math.min(1, sweepProgress * 2);
+
+            const edgeColor = hexToRgb(p.colorEdge);
+            const coreColor = hexToRgb(p.colorCore);
+            const glowColor = hexToRgb(p.colorGlow);
+
+            // Glow
+            if (p.glowIntensity > 0) {
+                ctx.beginPath();
+                ctx.moveTo(-len / 2, 0);
+                ctx.lineTo(len / 2, 0);
+                ctx.lineWidth = thick * (1 + p.glowSize * 2);
+                ctx.strokeStyle = `rgba(${glowColor.r},${glowColor.g},${glowColor.b},${opacity * p.glowIntensity * 0.4})`;
+                ctx.lineCap = p.taperEdges ? 'round' : 'butt';
+                ctx.stroke();
+            }
+
+            // Edge
+            ctx.beginPath();
+            ctx.moveTo(-len / 2, 0);
+            ctx.lineTo(len / 2, 0);
+            ctx.lineWidth = thick;
+            ctx.strokeStyle = `rgba(${edgeColor.r},${edgeColor.g},${edgeColor.b},${opacity * 0.9})`;
+            ctx.lineCap = p.taperEdges ? 'round' : 'butt';
+            ctx.stroke();
+
+            // Core
+            ctx.beginPath();
+            ctx.moveTo(-len / 2, 0);
+            ctx.lineTo(len / 2, 0);
+            ctx.lineWidth = thick * 0.4;
+            ctx.strokeStyle = `rgba(${coreColor.r},${coreColor.g},${coreColor.b},${opacity})`;
+            ctx.lineCap = p.taperEdges ? 'round' : 'butt';
+            ctx.stroke();
+        }
+
+        function drawCrossSlash(ctx, p, size, maxRadius, maxThick, sweepRad, sweepProgress, opacity, frameIndex) {
+            ctx.save();
+            drawStraightSlash(ctx, p, size, maxRadius, maxThick, sweepProgress, opacity, frameIndex);
+            ctx.rotate(Math.PI / 2);
+            const delayedProgress = Math.max(0, (sweepProgress - 0.3) / 0.7);
+            drawStraightSlash(ctx, p, size, maxRadius, maxThick, delayedProgress, opacity * 0.85, frameIndex);
+            ctx.restore();
+        }
+
+        function drawSpinSlash(ctx, p, size, maxRadius, maxThick, sweepProgress, opacity, frameIndex) {
+            const spinAngle = Math.PI * 2 * sweepProgress;
+            const startAngle = 0;
+            const endAngle = spinAngle;
+            const thick = maxThick * Math.min(1, sweepProgress * 2);
+
+            const edgeColor = hexToRgb(p.colorEdge);
+            const coreColor = hexToRgb(p.colorCore);
+            const glowColor = hexToRgb(p.colorGlow);
+
+            if (p.glowIntensity > 0) {
+                ctx.beginPath();
+                ctx.arc(0, 0, maxRadius, startAngle, endAngle);
+                ctx.lineWidth = thick * (1 + p.glowSize * 2);
+                ctx.strokeStyle = `rgba(${glowColor.r},${glowColor.g},${glowColor.b},${opacity * p.glowIntensity * 0.4})`;
+                ctx.lineCap = p.taperEdges ? 'round' : 'butt';
+                ctx.stroke();
+            }
+
+            ctx.beginPath();
+            ctx.arc(0, 0, maxRadius, startAngle, endAngle);
+            ctx.lineWidth = thick;
+            ctx.strokeStyle = `rgba(${edgeColor.r},${edgeColor.g},${edgeColor.b},${opacity * 0.9})`;
+            ctx.lineCap = p.taperEdges ? 'round' : 'butt';
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(0, 0, maxRadius, startAngle, endAngle);
+            ctx.lineWidth = thick * 0.4;
+            ctx.strokeStyle = `rgba(${coreColor.r},${coreColor.g},${coreColor.b},${opacity})`;
+            ctx.lineCap = p.taperEdges ? 'round' : 'butt';
+            ctx.stroke();
+        }
+
+        function drawStabSlash(ctx, p, size, maxRadius, maxThick, sweepProgress, opacity, frameIndex) {
+            const len = maxRadius * 2 * sweepProgress;
+            const thick = maxThick * 0.5 * Math.min(1, sweepProgress * 3);
+
+            const edgeColor = hexToRgb(p.colorEdge);
+            const coreColor = hexToRgb(p.colorCore);
+            const glowColor = hexToRgb(p.colorGlow);
+
+            // Pointed tip shape
+            ctx.save();
+
+            // Glow
+            if (p.glowIntensity > 0) {
+                ctx.beginPath();
+                ctx.moveTo(-len * 0.1, 0);
+                ctx.lineTo(len * 0.9, 0);
+                ctx.lineWidth = thick * (1 + p.glowSize * 3);
+                ctx.strokeStyle = `rgba(${glowColor.r},${glowColor.g},${glowColor.b},${opacity * p.glowIntensity * 0.4})`;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+
+            // Impact burst at tip
+            if (sweepProgress > 0.6) {
+                const burstOpacity = opacity * ((sweepProgress - 0.6) / 0.4);
+                const burstSize = thick * 2;
+                ctx.beginPath();
+                ctx.arc(len * 0.9, 0, burstSize, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${coreColor.r},${coreColor.g},${coreColor.b},${burstOpacity * 0.6})`;
+                ctx.fill();
+            }
+
+            // Edge
+            ctx.beginPath();
+            ctx.moveTo(-len * 0.1, 0);
+            ctx.lineTo(len * 0.9, 0);
+            ctx.lineWidth = thick;
+            ctx.strokeStyle = `rgba(${edgeColor.r},${edgeColor.g},${edgeColor.b},${opacity * 0.9})`;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // Core
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(len * 0.9, 0);
+            ctx.lineWidth = thick * 0.3;
+            ctx.strokeStyle = `rgba(${coreColor.r},${coreColor.g},${coreColor.b},${opacity})`;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function drawPunchSlash(ctx, p, size, maxRadius, maxThick, sweepProgress, opacity, frameIndex) {
+            const edgeColor = hexToRgb(p.colorEdge);
+            const coreColor = hexToRgb(p.colorCore);
+
+            const t = frameIndex / Math.max(1, p.frameCount - 1);
+
+            // Lines grow from a fixed left anchor; tip travels rightward
+            const anchorX  = -maxRadius * 0.45;
+            const maxTip   = maxRadius * 0.55;  // rightmost position when fully extended
+            const tipP     = Math.min(1, t * 2.8);  // tip reaches full extent quickly
+            const tipX     = anchorX + (maxTip - anchorX) * tipP;
+
+            // Trail alpha: fades out once tip is extended
+            const trailOut = Math.max(0, 1 - Math.max(0, t - 0.35) / 0.45);
+            const trailAlpha = opacity * tipP * trailOut;
+
+            // Shockwave: expands from tip once it's mostly extended
+            const shockP = Math.max(0, Math.min(1, (t - 0.3) / 0.4));
+
+            // Impact arcs: appear after shockwave, linger
+            const impactP = Math.max(0, Math.min(1, (t - 0.45) / 0.35));
+
+            // ── Motion lines (grow rightward from anchor) ─────────────
+            if (trailAlpha > 0.01 && tipX > anchorX) {
+                const strokeW = maxThick * 0.26;
+                const wisps = [
+                    { yOff: 0,                lenMult: 1.0, a: 0.80 },
+                    { yOff: -maxThick * 0.35, lenMult: 0.72, a: 0.45 },
+                    { yOff:  maxThick * 0.35, lenMult: 0.72, a: 0.45 },
+                    { yOff: -maxThick * 0.65, lenMult: 0.40, a: 0.20 },
+                    { yOff:  maxThick * 0.65, lenMult: 0.40, a: 0.20 },
+                ];
+                for (const w of wisps) {
+                    const lineEnd   = tipX;
+                    const lineStart = anchorX + (tipX - anchorX) * (1 - w.lenMult);
+                    if (lineEnd - lineStart < 1) continue;
+                    ctx.beginPath();
+                    ctx.moveTo(lineStart, w.yOff);
+                    ctx.lineTo(lineEnd,   w.yOff);
+                    ctx.lineWidth = strokeW * (w.yOff === 0 ? 1 : 0.55);
+                    ctx.strokeStyle = `rgba(${edgeColor.r},${edgeColor.g},${edgeColor.b},${trailAlpha * w.a})`;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                }
+            }
+
+            // ── Shockwave: arc expanding from tip ─────────────────────
+            if (shockP > 0.01) {
+                const shockR = maxThick * (0.25 + shockP * 0.9);
+                const shockA = opacity * shockP * (1 - shockP * 0.7);
+                ctx.beginPath();
+                ctx.arc(maxTip, 0, shockR, -Math.PI * 0.55, Math.PI * 0.55);
+                ctx.lineWidth = maxThick * 0.28 * (1 - shockP * 0.75);
+                ctx.strokeStyle = `rgba(${coreColor.r},${coreColor.g},${coreColor.b},${shockA})`;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+
+            // ── Dust impact arcs at tip ───────────────────────────────
+            if (impactP > 0.01) {
+                const arcSpan = Math.PI * 0.52;
+                const r1 = maxThick * (0.5 + impactP * 0.55);
+                const arcW = maxThick * 0.18 * (1 - impactP * 0.35);
+
+                ctx.beginPath();
+                ctx.arc(maxTip, 0, r1, -arcSpan, arcSpan);
+                ctx.lineWidth = arcW;
+                ctx.strokeStyle = `rgba(${edgeColor.r},${edgeColor.g},${edgeColor.b},${opacity * impactP * 0.85})`;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(maxTip, 0, r1 * 0.5, -arcSpan * 0.6, arcSpan * 0.6);
+                ctx.lineWidth = arcW * 0.6;
+                ctx.strokeStyle = `rgba(${coreColor.r},${coreColor.g},${coreColor.b},${opacity * impactP})`;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+        }
+
+        function drawParticles(ctx, p, size, maxRadius, sweepRad, sweepProgress, opacity, frameIndex) {
+            const coreColor = hexToRgb(p.colorCore);
+            const edgeColor = hexToRgb(p.colorEdge);
+            const rng = seededRandom(frameIndex * 1000 + particleSeed);
+
+            for (let i = 0; i < p.particles; i++) {
+                const pAngle = (rng() - 0.5) * sweepRad * sweepProgress;
+                const pDist = maxRadius * (0.5 + rng() * 0.8);
+                const pSize = Math.max(1, (1 + rng() * 2) * (size / 64));
+                const px = Math.cos(pAngle) * pDist;
+                const py = Math.sin(pAngle) * pDist;
+                const pOpacity = opacity * (0.3 + rng() * 0.7);
+
+                const useCore = rng() > 0.5;
+                const col = useCore ? coreColor : edgeColor;
+
+                ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${pOpacity})`;
+                if (p.pixelSnap) {
+                    ctx.fillRect(Math.round(px), Math.round(py), Math.round(pSize), Math.round(pSize));
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(px, py, pSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        // ============================================================
+        //  PIXEL SNAP POST-PROCESS
+        // ============================================================
+        function pixelSnap(canvas) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            // Threshold alpha to fully opaque or transparent
+            for (let i = 3; i < data.length; i += 4) {
+                data[i] = data[i] > 80 ? 255 : 0;
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // ============================================================
+        //  GENERATE ALL FRAMES
+        // ============================================================
+        function generateFrames() {
+            const p = getParams();
+            frames = [];
+            particleSeed = Math.floor(Math.random() * 99999);
+
+            for (let i = 0; i < p.frameCount; i++) {
+                const canvas = document.createElement('canvas');
+                canvas.width = p.frameSize;
+                canvas.height = p.frameSize;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, p.frameSize, p.frameSize);
+                ctx.imageSmoothingEnabled = false;
+
+                renderFrame(ctx, i, p);
+
+                if (p.pixelSnap) {
+                    pixelSnap(canvas);
+                }
+
+                frames.push(canvas);
+            }
+
+            updateFramesGrid(p);
+            updateSpritesheet(p);
+            updateExportInfo(p);
+
+            if (currentFrame >= p.frameCount) currentFrame = 0;
+            drawPreview();
+            restartAnimation();
+        }
+
+        // ============================================================
+        //  UI UPDATES
+        // ============================================================
+        function updateFramesGrid(p) {
+            const grid = document.getElementById('framesGrid');
+            grid.innerHTML = '';
+            const displaySize = Math.min(64, Math.max(32, 256 / p.frameCount));
+
+            frames.forEach((frame, i) => {
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = `
+                    background: repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 50% / 8px 8px;
+                    border-radius: 4px; overflow: hidden; cursor: pointer;
+                    border: 2px solid ${i === currentFrame ? '#e94560' : '#0f3460'};
+                    width: ${displaySize}px; height: ${displaySize}px;
+                    display: flex; align-items: center; justify-content: center;
+                    position: relative;
+                `;
+                wrapper.onclick = () => { currentFrame = i; drawPreview(); updateFramesGrid(p); };
+
+                const c = document.createElement('canvas');
+                c.width = displaySize;
+                c.height = displaySize;
+                c.style.imageRendering = 'pixelated';
+                const ctx = c.getContext('2d');
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(frame, 0, 0, displaySize, displaySize);
+                wrapper.appendChild(c);
+
+                const label = document.createElement('div');
+                label.textContent = i + 1;
+                label.style.cssText = 'position:absolute;bottom:1px;right:3px;font-size:9px;color:#888;font-family:monospace;';
+                wrapper.appendChild(label);
+
+                grid.appendChild(wrapper);
+            });
+        }
+
+        function updateSpritesheet(p) {
+            const canvas = document.getElementById('spritesheetCanvas');
+            const scale = p.exportScale;
+            const fw = p.frameSize * scale;
+            const fh = p.frameSize * scale;
+            canvas.width = fw * p.frameCount;
+            canvas.height = fh;
+            canvas.style.height = Math.min(128, fh) + 'px';
+
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            frames.forEach((frame, i) => {
+                ctx.drawImage(frame, i * fw, 0, fw, fh);
+            });
+        }
+
+        function updateExportInfo(p) {
+            const scale = p.exportScale;
+            const fw = p.frameSize * scale;
+            const totalW = fw * p.frameCount;
+            document.getElementById('exportInfo').textContent =
+                `${p.frameSize}×${p.frameSize} × ${p.frameCount} frames @ ${scale}x = ${totalW}×${fw}px`;
+        }
+
+        function drawPreview() {
+            const canvas = document.getElementById('previewCanvas');
+            const ctx = canvas.getContext('2d');
+            const p = getParams();
+            const displaySize = 192;
+            canvas.width = displaySize;
+            canvas.height = displaySize;
+            ctx.imageSmoothingEnabled = false;
+            ctx.clearRect(0, 0, displaySize, displaySize);
+
+            if (frames[currentFrame]) {
+                ctx.drawImage(frames[currentFrame], 0, 0, displaySize, displaySize);
+            }
+
+            document.getElementById('frameIndicator').textContent =
+                `${currentFrame + 1} / ${p.frameCount}`;
+        }
+
+        // ============================================================
+        //  PLAYBACK
+        // ============================================================
+        function restartAnimation() {
+            if (animTimer) clearInterval(animTimer);
+            if (playing) {
+                const p = getParams();
+                animTimer = setInterval(() => {
+                    currentFrame = (currentFrame + 1) % frames.length;
+                    drawPreview();
+                    // Update frame grid selection
+                    const grid = document.getElementById('framesGrid');
+                    const wrappers = grid.children;
+                    for (let i = 0; i < wrappers.length; i++) {
+                        wrappers[i].style.borderColor = i === currentFrame ? '#e94560' : '#0f3460';
+                    }
+                }, 1000 / p.fps);
+            }
+        }
+
+        function togglePlay() {
+            playing = !playing;
+            document.getElementById('btnPlay').textContent = playing ? '▶ Play' : '⏸ Pause';
+            document.getElementById('btnPlay').classList.toggle('active', playing);
+            restartAnimation();
+        }
+
+        function stepPrev() {
+            playing = false;
+            document.getElementById('btnPlay').textContent = '⏸ Pause';
+            document.getElementById('btnPlay').classList.remove('active');
+            if (animTimer) clearInterval(animTimer);
+            currentFrame = (currentFrame - 1 + frames.length) % frames.length;
+            drawPreview();
+            const p = getParams();
+            updateFramesGrid(p);
+        }
+
+        function stepNext() {
+            playing = false;
+            document.getElementById('btnPlay').textContent = '⏸ Pause';
+            document.getElementById('btnPlay').classList.remove('active');
+            if (animTimer) clearInterval(animTimer);
+            currentFrame = (currentFrame + 1) % frames.length;
+            drawPreview();
+            const p = getParams();
+            updateFramesGrid(p);
+        }
+
+        // ============================================================
+        //  EXPORT
+        // ============================================================
+        function exportSpritesheet() {
+            const p = getParams();
+            const scale = p.exportScale;
+            const fw = p.frameSize * scale;
+            const canvas = document.createElement('canvas');
+            canvas.width = fw * p.frameCount;
+            canvas.height = fw;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+
+            frames.forEach((frame, i) => {
+                ctx.drawImage(frame, i * fw, 0, fw, fw);
+            });
+
+            const link = document.createElement('a');
+            link.download = `slash_vfx_${p.frameSize}x${p.frameSize}_${p.frameCount}f.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function exportGif() {
+            // Simple animated GIF export using a minimal GIF encoder
+            // We'll create an animated preview by exporting individual frames as a zip-like download
+            // For true GIF, we'd need a library — instead let's export as individual PNGs or use the spritesheet
+            alert('💡 Tip: Use the PNG spritesheet export and convert to GIF using ezgif.com or similar tools.\n\nAlternatively, you can use the spritesheet directly in your game engine!');
+        }
+
+        // ============================================================
+        //  PRESETS
+        // ============================================================
+        const presets = {
+            classic: {
+                slashType: 'arc', angle: -45, sweep: 150, radius: 70, thickness: 40,
+                colorCore: '#ffffff', colorEdge: '#88ccff', colorGlow: '#4488ff',
+                glowIntensity: 50, glowSize: 40, trailLength: 30, particles: 5,
+                attackPhase: 30, sustainPhase: 20, decayPhase: 50,
+                pixelSnap: true, taperEdges: true, smear: true
+            },
+            fire: {
+                slashType: 'arc', angle: -30, sweep: 180, radius: 75, thickness: 45,
+                colorCore: '#ffff44', colorEdge: '#ff4400', colorGlow: '#ff2200',
+                glowIntensity: 80, glowSize: 60, trailLength: 60, particles: 12,
+                attackPhase: 25, sustainPhase: 25, decayPhase: 50,
+                pixelSnap: true, taperEdges: true, smear: true
+            },
+            ice: {
+                slashType: 'arc', angle: -60, sweep: 120, radius: 65, thickness: 30,
+                colorCore: '#ffffff', colorEdge: '#44ddff', colorGlow: '#0088cc',
+                glowIntensity: 60, glowSize: 50, trailLength: 20, particles: 8,
+                attackPhase: 20, sustainPhase: 30, decayPhase: 50,
+                pixelSnap: true, taperEdges: true, smear: false
+            },
+            electric: {
+                slashType: 'cross', angle: 0, sweep: 150, radius: 60, thickness: 25,
+                colorCore: '#ffffff', colorEdge: '#ffff00', colorGlow: '#aaff00',
+                glowIntensity: 90, glowSize: 70, trailLength: 10, particles: 15,
+                attackPhase: 15, sustainPhase: 15, decayPhase: 70,
+                pixelSnap: true, taperEdges: false, smear: true
+            },
+            dark: {
+                slashType: 'arc', angle: -45, sweep: 200, radius: 80, thickness: 50,
+                colorCore: '#cc44ff', colorEdge: '#6600aa', colorGlow: '#330066',
+                glowIntensity: 70, glowSize: 60, trailLength: 50, particles: 8,
+                attackPhase: 35, sustainPhase: 10, decayPhase: 55,
+                pixelSnap: true, taperEdges: true, smear: true
+            },
+            holy: {
+                slashType: 'spin', angle: 0, sweep: 150, radius: 60, thickness: 30,
+                colorCore: '#ffffff', colorEdge: '#ffee88', colorGlow: '#ffcc00',
+                glowIntensity: 80, glowSize: 80, trailLength: 40, particles: 20,
+                attackPhase: 20, sustainPhase: 20, decayPhase: 60,
+                pixelSnap: true, taperEdges: true, smear: true
+            },
+            wind: {
+                slashType: 'arc', angle: -90, sweep: 280, radius: 75, thickness: 20,
+                colorCore: '#ffffff', colorEdge: '#aaeebb', colorGlow: '#44aa66',
+                glowIntensity: 30, glowSize: 30, trailLength: 70, particles: 10,
+                attackPhase: 20, sustainPhase: 10, decayPhase: 70,
+                pixelSnap: true, taperEdges: true, smear: true
+            },
+            blood: {
+                slashType: 'straight', angle: -30, sweep: 150, radius: 80, thickness: 35,
+                colorCore: '#ff4444', colorEdge: '#aa0000', colorGlow: '#660000',
+                glowIntensity: 40, glowSize: 30, trailLength: 50, particles: 15,
+                attackPhase: 15, sustainPhase: 10, decayPhase: 75,
+                pixelSnap: true, taperEdges: true, smear: true
+            },
+            punchH: {
+                slashType: 'punch', angle: 0, sweep: 150, radius: 65, thickness: 42,
+                colorCore: '#ffffff', colorEdge: '#aaddcc', colorGlow: '#aaddcc',
+                glowIntensity: 0, glowSize: 0, trailLength: 60, particles: 0,
+                attackPhase: 30, sustainPhase: 10, decayPhase: 60,
+                pixelSnap: true, taperEdges: true, smear: false
+            },
+        };
+
+        function applyPreset(name) {
+            const pr = presets[name];
+            if (!pr) return;
+
+            document.getElementById('slashType').value = pr.slashType;
+            document.getElementById('angle').value = pr.angle;
+            document.getElementById('sweep').value = pr.sweep;
+            document.getElementById('radius').value = pr.radius;
+            document.getElementById('thickness').value = pr.thickness;
+            document.getElementById('colorCore').value = pr.colorCore;
+            document.getElementById('colorEdge').value = pr.colorEdge;
+            document.getElementById('colorGlow').value = pr.colorGlow;
+            document.getElementById('glowIntensity').value = pr.glowIntensity;
+            document.getElementById('glowSize').value = pr.glowSize;
+            document.getElementById('trailLength').value = pr.trailLength;
+            document.getElementById('particles').value = pr.particles;
+            document.getElementById('attackPhase').value = pr.attackPhase;
+            document.getElementById('sustainPhase').value = pr.sustainPhase;
+            document.getElementById('decayPhase').value = pr.decayPhase;
+            document.getElementById('pixelSnap').checked = pr.pixelSnap;
+            document.getElementById('taperEdges').checked = pr.taperEdges;
+            document.getElementById('smear').checked = pr.smear;
+
+            // Update all value displays
+            updateAllLabels();
+
+            // Highlight preset button
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            generateFrames();
+        }
+
+        // ============================================================
+        //  WIRING
+        // ============================================================
+        function updateAllLabels() {
+            const ids = [
+                'frameSize', 'frameCount', 'fps', 'exportScale',
+                'angle', 'sweep', 'radius', 'thickness', 'offsetX', 'offsetY',
+                'glowIntensity', 'glowSize', 'trailLength', 'particles',
+                'attackPhase', 'sustainPhase', 'decayPhase'
+            ];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                const label = document.getElementById('val-' + id);
+                if (el && label) label.textContent = el.value;
+            });
+        }
+
+        function init() {
+            // Bind all controls
+            const allInputs = document.querySelectorAll('input, select');
+            allInputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    updateAllLabels();
+                    generateFrames();
+                });
+            });
+
+            updateAllLabels();
+            generateFrames();
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

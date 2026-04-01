@@ -1,6 +1,11 @@
 uniform float rotation = 0.0; // radians
+uniform bool billboard_enabled = true;
 
 vec3 get_billboard_vertex(vec3 original_vertex, mat4 model_matrix, mat4 view_matrix) {
+    if (!billboard_enabled) {
+        return (view_matrix * model_matrix * vec4(original_vertex, 1.0)).xyz;
+    }
+
     vec3 center_ws = model_matrix[3].xyz;
     vec3 center_vs = (view_matrix * vec4(center_ws, 1.0)).xyz;
 
