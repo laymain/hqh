@@ -1,6 +1,8 @@
 class_name AbilityComponent extends Node
 
 signal ability_activated(ability: AbilityResource, aim_pos: Vector3)
+signal ability_started(slot: int, total_cooldown: float)
+signal ability_ready(slot: int)
 
 
 var is_casting: bool = false
@@ -47,9 +49,22 @@ func _init_handlers() -> void:
             _handlers[i] = handler
 
 
+func get_ability_count() -> int:
+    return _handlers.size()
+
+
+func get_ability_resource(slot: int) -> AbilityResource:
+    if slot < 0 or slot >= _character.stats.abilities.size():
+        return null
+    return _library.get_ability(_character.stats.abilities[slot])
+
+
 func _process(delta: float) -> void:
     for i in _cooldowns.size():
-        _cooldowns[i] = maxf(_cooldowns[i] - delta, 0.0)
+        if _cooldowns[i] > 0.0:
+            _cooldowns[i] = maxf(_cooldowns[i] - delta, 0.0)
+            if _cooldowns[i] == 0.0:
+                ability_ready.emit(i)
 
 
 func execute(slot: int, aim_pos: Vector3) -> void:
@@ -93,6 +108,8 @@ func _perform_cast(slot: int, aim_pos: Vector3) -> void:
         _orient_handler(handler, aim_pos)
         await handler.execute(ability, AbilityContext.new(_character, aim_pos, _combo_count))
         _cooldowns[slot] = ability.cooldown
+        if ability.cooldown > 0.0:
+            ability_started.emit(slot, ability.cooldown)
         _combo_count += 1
 
 
@@ -115,7 +132,7 @@ class BufferedAction:
     var aim_pos: Vector3
     var timestamp_msec: int
 
-    const QUEUE_EXPIRY_MSEC: int = 500
+    const QUEUE_EXPIRY_MSEC: int = 250
 
     func _init(p_slot: int, p_aim_pos: Vector3) -> void:
         slot = p_slot

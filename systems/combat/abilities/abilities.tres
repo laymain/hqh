@@ -19,9 +19,9 @@ knockback_forces = Array[float]([0.0, 0.0, 8.0])
 script = ExtResource("2_ability")
 id = "dash"
 can_combo = false
-cooldown = 5.0
-dash_force = 15.0
+cooldown = 3.5
 handler_scene = ExtResource("3_2o6i0")
+dash_force = 15.0
 metadata/_custom_type_script = "uid://gs72c3djb5ph"
 
 [resource]

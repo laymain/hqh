@@ -1,6 +1,7 @@
 class_name AbilityResource extends Resource
 
 @export var id: String
+@export var icon: Texture2D
 @export var animations: Array[StringName] = []
 @export var cooldown: float
 @export var can_combo: bool = true

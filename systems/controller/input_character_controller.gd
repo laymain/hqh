@@ -38,11 +38,11 @@ func get_movement_command(character: Character, _delta: float) -> MovementComman
 func get_action_command(character: Character, _delta: float) -> ActionCommand:
     var command := ActionCommand.new()
     if !character.health.is_dead:
-        if Input.is_action_just_pressed(ABILITY_0_ACTION): command.pressed_slots.append(0)
-        #if Input.is_action_just_pressed(ABILITY_1_ACTION): command.pressed_slots.append(1)
-        #if Input.is_action_just_pressed(ABILITY_2_ACTION): command.pressed_slots.append(2)
-        #if Input.is_action_just_pressed(ABILITY_3_ACTION): command.pressed_slots.append(3)
-        if Input.is_action_just_pressed(ABILITY_4_ACTION): command.pressed_slots.append(4)
+        if Input.is_action_pressed(ABILITY_0_ACTION): command.pressed_slots.append(0)
+        #if Input.is_action_pressed(ABILITY_1_ACTION): command.pressed_slots.append(1)
+        #if Input.is_action_pressed(ABILITY_2_ACTION): command.pressed_slots.append(2)
+        #if Input.is_action_pressed(ABILITY_3_ACTION): command.pressed_slots.append(3)
+        if Input.is_action_pressed(ABILITY_4_ACTION): command.pressed_slots.append(4)
         command.aim_position = _last_aim_position
 
     return command

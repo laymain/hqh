@@ -1,0 +1,53 @@
+[gd_scene format=3 uid="uid://cdt5x368hkx3h"]
+
+[ext_resource type="Script" uid="uid://xoji6lts7jkc" path="res://shared/ui/hud/ability_slot.gd" id="1_slot"]
+[ext_resource type="Texture2D" uid="uid://cd61b8mtsccxn" path="res://assets/ui/kenney_adventure/round_brown.png" id="2_round"]
+[ext_resource type="Shader" path="res://shared/ui/hud/cooldown_overlay.gdshader" id="3_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_overlay"]
+resource_local_to_scene = true
+shader = ExtResource("3_shader")
+shader_parameter/mask_texture = ExtResource("2_round")
+shader_parameter/progress = 1.0
+
+[node name="AbilitySlot" type="Control" unique_id=509282482]
+clip_contents = true
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_slot")
+
+[node name="Background" type="TextureRect" parent="." unique_id=961965692]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture = ExtResource("2_round")
+expand_mode = 1
+
+[node name="Icon" type="TextureRect" parent="." unique_id=1841281280]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CooldownOverlay" type="ColorRect" parent="." unique_id=1064247604]
+visible = false
+material = SubResource("ShaderMaterial_overlay")
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0)
+
+[node name="CooldownLabel" type="Label" parent="." unique_id=400366361]
+visible = false
+modulate = Color(0.40069774, 0.40069774, 0.40069768, 1)
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+horizontal_alignment = 1
+vertical_alignment = 1

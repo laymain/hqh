@@ -6,6 +6,7 @@ class_name MapManager extends Node
 @export var enemy_prefab : PackedScene
 
 @onready var meshes : Dictionary[String, Array] = init_meshes()
+var player: Character
 var _grids: Array[GridMap] = []
 
 func _ready() -> void:
@@ -117,10 +118,16 @@ func _setup_room_tints(lights_data: Array) -> void:
 
 func _setup_markers(markers: Array) -> void:
     for marker in markers:
-        if marker.type == "START" or marker.type == "ENCOUNTER":
-            var character : Character = (player_prefab if marker.type == "START" else enemy_prefab).instantiate()
-            add_child(character)
-            character.global_position = _marker_to_world_position(marker)
+        var character: Character
+        if marker.type == "START":
+            character = player_prefab.instantiate()
+            player = character
+        elif marker.type == "ENCOUNTER":
+            character = enemy_prefab.instantiate()
+        else:
+            continue
+        add_child(character)
+        character.global_position = _marker_to_world_position(marker)
 
 func _marker_to_world_position(marker: Variant) -> Vector3:
     return Vector3(float(marker.x) * CELL_SIZE.x, CELL_SIZE.y, float(marker.y) * CELL_SIZE.z)

@@ -5,8 +5,11 @@
 [ext_resource type="Script" uid="uid://bgxs3urdi1inu" path="res://world/dungeon/environment.gd" id="4_1bvp3"]
 [ext_resource type="PackedScene" uid="uid://b7kvf3bo230p4" path="res://actors/player/player.tscn" id="5_lquwl"]
 [ext_resource type="PackedScene" uid="uid://bairacbilxu7" path="res://actors/enemies/enemy.tscn" id="6_7mycd"]
+[ext_resource type="Script" path="res://main.gd" id="7_main"]
+[ext_resource type="PackedScene" path="res://shared/ui/hud/hud.tscn" id="8_hud"]
 
 [node name="Main" type="Node3D" unique_id=150515328]
+script = ExtResource("7_main")
 
 [node name="Environment" type="Node" parent="." unique_id=216227157]
 script = ExtResource("4_1bvp3")
@@ -17,3 +20,5 @@ cell_size = Vector3(4, 4, 4)
 mesh_library = ExtResource("1_ig7tw")
 player_prefab = ExtResource("5_lquwl")
 enemy_prefab = ExtResource("6_7mycd")
+
+[node name="HUD" parent="." instance=ExtResource("8_hud")]

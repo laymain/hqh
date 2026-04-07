@@ -1,0 +1,94 @@
+[gd_scene format=3 uid="uid://c3ky8u4e8eyr3"]
+
+[ext_resource type="Script" uid="uid://dlw4okc5xwxv1" path="res://shared/ui/hud/hud.gd" id="1_hud"]
+[ext_resource type="PackedScene" path="res://shared/ui/hud/ability_slot.tscn" id="2_slot"]
+[ext_resource type="Texture2D" uid="uid://b7p1sqnew40m3" path="res://assets/ui/kenney_adventure/panel_brown.png" id="3_pb"]
+[ext_resource type="Texture2D" uid="uid://cxvsxst2g10eq" path="res://assets/ui/kenney_adventure/panel_brown_dark.png" id="4_pbd"]
+[ext_resource type="Texture2D" uid="uid://cpkq8m0pxc8w3" path="res://assets/ui/kenney_adventure/progress_green_small.png" id="5_pg"]
+[ext_resource type="Texture2D" uid="uid://ca7gl06dex25x" path="res://assets/ui/kenney_adventure/progress_green_small_border.png" id="6_pgb"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_nameplate"]
+content_margin_left = 6.0
+content_margin_top = 4.0
+content_margin_right = 6.0
+content_margin_bottom = 4.0
+texture = ExtResource("3_pb")
+texture_margin_left = 10.0
+texture_margin_top = 10.0
+texture_margin_right = 10.0
+texture_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_abilities"]
+content_margin_left = 6.0
+content_margin_top = 4.0
+content_margin_right = 6.0
+content_margin_bottom = 4.0
+texture = ExtResource("4_pbd")
+texture_margin_left = 10.0
+texture_margin_top = 10.0
+texture_margin_right = 10.0
+texture_margin_bottom = 10.0
+
+[node name="HUD" type="CanvasLayer" unique_id=1765960776]
+script = ExtResource("1_hud")
+ability_slot_scene = ExtResource("2_slot")
+
+[node name="HUDRoot" type="Control" parent="." unique_id=223438784]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="BottomBar" type="HBoxContainer" parent="HUDRoot" unique_id=1948007149]
+layout_mode = 0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -58.0
+offset_bottom = -18.0
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="NameplatePanel" type="PanelContainer" parent="HUDRoot/BottomBar" unique_id=1218398533]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxTexture_nameplate")
+
+[node name="Inner" type="VBoxContainer" parent="HUDRoot/BottomBar/NameplatePanel" unique_id=393017509]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="PlayerName" type="Label" parent="HUDRoot/BottomBar/NameplatePanel/Inner" unique_id=181418100]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+text = "Player"
+horizontal_alignment = 1
+
+[node name="HealthBar" type="TextureProgressBar" parent="HUDRoot/BottomBar/NameplatePanel/Inner" unique_id=2064660263]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+value = 100.0
+nine_patch_stretch = true
+stretch_margin_left = 6
+stretch_margin_right = 6
+texture_under = ExtResource("6_pgb")
+texture_progress = ExtResource("5_pg")
+
+[node name="AbilityPanel" type="PanelContainer" parent="HUDRoot/BottomBar" unique_id=2092349242]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxTexture_abilities")
+
+[node name="AbilityBar" type="HBoxContainer" parent="HUDRoot/BottomBar/AbilityPanel" unique_id=1213666752]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
