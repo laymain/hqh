@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://br018gqiha8ha"]
+
+[ext_resource type="Script" uid="uid://dwmvx61me65l5" path="res://systems/combat/abilities/dash/dash_ability.gd" id="1_script"]
+
+[node name="DashAbility" type="Node3D" unique_id=691061674]
+script = ExtResource("1_script")

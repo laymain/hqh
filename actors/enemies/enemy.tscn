@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bairacbilxu7"]
 
 [ext_resource type="Script" uid="uid://2ase04gwxpho" path="res://actors/base/character.gd" id="1_oprov"]
-[ext_resource type="Resource" path="res://systems/stats/enemy_stats.tres" id="2_i6yqm"]
+[ext_resource type="Resource" uid="uid://b4unn8wjxpfol" path="res://systems/stats/enemy_stats.tres" id="2_i6yqm"]
 [ext_resource type="Shader" uid="uid://geq7jsoxllg5" path="res://shaders/character.gdshader" id="2_rkk0s"]
 [ext_resource type="Resource" uid="uid://de53paqhj8xks" path="res://systems/combat/abilities/abilities.tres" id="3_e6qfo"]
 [ext_resource type="Texture2D" uid="uid://d10cn5c08c5rh" path="res://assets/character/enemy.png" id="3_oprov"]

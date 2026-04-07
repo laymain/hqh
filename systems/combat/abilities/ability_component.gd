@@ -59,7 +59,9 @@ func execute(slot: int, aim_pos: Vector3) -> void:
 
     if is_casting:
         if slot == _active_slot:
-            _queued_action = BufferedAction.new(slot, aim_pos)
+            var ability := _library.get_ability(_character.stats.abilities[slot])
+            if ability and ability.can_combo:
+                _queued_action = BufferedAction.new(slot, aim_pos)
         return
 
     if _cooldowns[slot] > 0.0:

@@ -9,11 +9,10 @@ class_name CharacterStats extends Resource
 @export var crit_multiplier: float = 1.5
 
 @export_group("Movement")
-@export var move_speed: float = 7.5
-@export var acceleration: float = 28.0
-@export var deceleration: float = 32.0
+@export var move_speed: float = 5.0
+@export var acceleration: float = 32.0
+@export var deceleration: float = 38.0
 @export var turn_speed: float = 10.0
-@export var jump_velocity: float = 5.0
 @export var gravity_enabled: bool = true
 
 @export_group("Abilities")

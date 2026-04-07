@@ -15,6 +15,12 @@ var damage_type: Enums.DamageType = Enums.DamageType.PHYSICAL
 ## Whether this hit was a critical strike.
 var is_crit: bool = false
 
+## Knockback impulse force to apply to the target.
+var knockback_force: float = 0.0
+
+## Normalized direction the knockback should push the target.
+var knockback_direction: Vector3 = Vector3.ZERO
+
 ## A log of what reduced or increased the damage (e.g. ["Barrier -10", "Armor -2"]).
 var mitigation_history: Array[String] = []
 

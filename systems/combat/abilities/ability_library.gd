@@ -8,6 +8,4 @@ func get_ability(id: String) -> AbilityResource:
         if ability:
             if ability.id == id:
                 return ability
-        else:
-            push_error("[AbilityLibrary] Ability[", i, "] is null.")
     return null

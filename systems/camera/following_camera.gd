@@ -8,8 +8,8 @@ class_name FollowingCamera extends Node
 @export var zoom_step: float = 1.0
 @export var zoom_smooth_speed: float = 12.0
 
-var _target_distance: float = 12.0
-var _current_distance: float = 12.0
+var _target_distance: float = 8.0
+var _current_distance: float = 8.0
 
 var _camera: Camera3D
 

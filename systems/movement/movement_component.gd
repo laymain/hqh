@@ -28,8 +28,15 @@ func handle_movement(move_cmd: CharacterController.MovementCommand, delta: float
     _character.velocity.x = horizontal_velocity.x
     _character.velocity.z = horizontal_velocity.z
 
-    if move_cmd.jump_pressed and _character.is_on_floor():
-        _character.velocity.y = _character.stats.jump_velocity
+
+func apply_impulse(direction: Vector3, force: float, additivity: bool) -> void:
+    if not _character or force <= 0.0:
+        return
+    if additivity:
+        _character.velocity += direction * force
+    else:
+        _character.velocity = direction * force
+
 
 func handle_aiming(aim_pos: Vector3, delta: float) -> void:
     if not _character: return

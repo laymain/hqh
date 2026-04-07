@@ -15,6 +15,7 @@ var _damage_pipeline: Array[DamageProcessor] = []
 
 func _ready() -> void:
     if stats == null: stats = CharacterStats.new()
+    if controller == null: controller = CharacterController.new()
 
     abilities.setup(self, ability_library)
     attack.setup(self)
@@ -34,12 +35,9 @@ func handle_hit(info: DamageInfo) -> void:
         processor.process_damage(info)
         if info.final_amount <= 0:
             break
+    movement.apply_impulse(info.knockback_direction, info.knockback_force, true)
 
 func _physics_process(delta: float) -> void:
-    if health.is_dead: return
-    if not controller:
-        return
-
     var move_cmd := controller.get_movement_command(self, delta)
     var act_cmd := controller.get_action_command(self, delta)
     if not move_cmd or not act_cmd: return

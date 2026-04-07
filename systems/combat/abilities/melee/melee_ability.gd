@@ -31,4 +31,6 @@ func _on_attack_frame() -> void:
         if body is Character:
             var multiplier := _current_resource.get_multiplier(_current_ctx.combo_index)
             var info := _current_ctx.caster.attack.roll_damage(multiplier, Enums.DamageType.PHYSICAL)
+            info.knockback_force = _current_resource.get_knockback_force(_current_ctx.combo_index)
+            info.knockback_direction = (_current_ctx.caster.global_position - body.global_position).normalized() * -1.0
             body.handle_hit(info)

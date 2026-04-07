@@ -4,11 +4,11 @@ const MOVE_FORWARD_ACTION := &"move_forward"
 const MOVE_BACK_ACTION := &"move_back"
 const MOVE_LEFT_ACTION := &"move_left"
 const MOVE_RIGHT_ACTION := &"move_right"
-const JUMP_ACTION := &"jump"
 const ABILITY_0_ACTION := &"ability_0"
 const ABILITY_1_ACTION := &"ability_1"
 const ABILITY_2_ACTION := &"ability_2"
 const ABILITY_3_ACTION := &"ability_3"
+const ABILITY_4_ACTION := &"ability_4"
 
 @export var camera : FollowingCamera = null
 
@@ -28,22 +28,22 @@ func _process(_delta: float) -> void:
 # 2. Intent Translation (CharacterController API)
 # ------------------------------------------------------------------------------
 
-func get_movement_command(_character: Character, _delta: float) -> MovementCommand:
+func get_movement_command(character: Character, _delta: float) -> MovementCommand:
     var command := MovementCommand.new()
-    command.forward_input = Input.get_action_strength(MOVE_FORWARD_ACTION) - Input.get_action_strength(MOVE_BACK_ACTION)
-    command.lateral_input = Input.get_action_strength(MOVE_RIGHT_ACTION) - Input.get_action_strength(MOVE_LEFT_ACTION)
-    command.jump_pressed = Input.is_action_just_pressed(JUMP_ACTION)
+    if !character.health.is_dead:
+        command.forward_input = Input.get_action_strength(MOVE_FORWARD_ACTION) - Input.get_action_strength(MOVE_BACK_ACTION)
+        command.lateral_input = Input.get_action_strength(MOVE_RIGHT_ACTION) - Input.get_action_strength(MOVE_LEFT_ACTION)
     return command
 
-func get_action_command(_character: Character, _delta: float) -> ActionCommand:
+func get_action_command(character: Character, _delta: float) -> ActionCommand:
     var command := ActionCommand.new()
-
-    if Input.is_action_just_pressed(ABILITY_0_ACTION): command.pressed_slots.append(0)
-    if Input.is_action_just_pressed(ABILITY_1_ACTION): command.pressed_slots.append(1)
-    if Input.is_action_just_pressed(ABILITY_2_ACTION): command.pressed_slots.append(2)
-    if Input.is_action_just_pressed(ABILITY_3_ACTION): command.pressed_slots.append(3)
-
-    command.aim_position = _last_aim_position
+    if !character.health.is_dead:
+        if Input.is_action_just_pressed(ABILITY_0_ACTION): command.pressed_slots.append(0)
+        #if Input.is_action_just_pressed(ABILITY_1_ACTION): command.pressed_slots.append(1)
+        #if Input.is_action_just_pressed(ABILITY_2_ACTION): command.pressed_slots.append(2)
+        #if Input.is_action_just_pressed(ABILITY_3_ACTION): command.pressed_slots.append(3)
+        if Input.is_action_just_pressed(ABILITY_4_ACTION): command.pressed_slots.append(4)
+        command.aim_position = _last_aim_position
 
     return command
 
@@ -85,12 +85,12 @@ func _setup_input_bindings() -> void:
     _bind_key(MOVE_BACK_ACTION, KEY_S)
     _bind_key(MOVE_LEFT_ACTION, KEY_A)
     _bind_key(MOVE_RIGHT_ACTION, KEY_D)
-    _bind_key(JUMP_ACTION, KEY_SPACE)
 
     _bind_mouse(ABILITY_0_ACTION, MOUSE_BUTTON_LEFT)
     _bind_mouse(ABILITY_1_ACTION, MOUSE_BUTTON_RIGHT)
     _bind_key(ABILITY_2_ACTION, KEY_Q)
     _bind_key(ABILITY_3_ACTION, KEY_E)
+    _bind_key(ABILITY_4_ACTION, KEY_SPACE)
 
 func _bind_key(action_name: StringName, key_code: int) -> void:
     if not InputMap.has_action(action_name):
