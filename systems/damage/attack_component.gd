@@ -4,6 +4,16 @@ var _character: Character
 
 func setup(character: Character) -> void:
     _character = character
+    character.commands.dispatched.connect(_on_command)
+
+
+func _on_command(cmd: Object) -> void:
+    if cmd is AttackCommand:
+        for target: Character in cmd.targets:
+            var info := roll_damage(cmd.multiplier, cmd.damage_type)
+            info.knockback_force = cmd.knockback_force
+            info.knockback_direction = (_character.global_position - target.global_position).normalized() * -1.0
+            target.handle_hit(info)
 
 func roll_damage(multiplier: float, damage_type: Enums.DamageType) -> DamageInfo:
     var raw := _character.stats.base_power * multiplier

@@ -1,6 +1,6 @@
 class_name HealthComponent extends DamageProcessor
 
-signal health_changed(amount: float, current: float, max: float)
+signal health_changed(amount: float, current: float, max_hp: float)
 signal died
 
 var current_health: float = 0.0

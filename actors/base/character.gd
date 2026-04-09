@@ -11,6 +11,8 @@ class_name Character extends CharacterBody3D
 @onready var movement: MovementComponent = $MovementComponent
 @onready var visuals: CharacterVisuals = $CharacterVisuals
 
+var commands := CharacterCommands.new()
+
 var _damage_pipeline: Array[DamageProcessor] = []
 
 func _ready() -> void:

@@ -24,11 +24,11 @@ var knockback_direction: Vector3 = Vector3.ZERO
 ## A log of what reduced or increased the damage (e.g. ["Barrier -10", "Armor -2"]).
 var mitigation_history: Array[String] = []
 
-func _init(_raw_amount: float = 0.0, _attacker: Character = null, _type: Enums.DamageType = Enums.DamageType.PHYSICAL) -> void:
-    raw_amount = _raw_amount
-    final_amount = _raw_amount
-    attacker = _attacker
-    damage_type = _type
+func _init(p_raw_amount: float = 0.0, p_attacker: Character = null, p_type: Enums.DamageType = Enums.DamageType.PHYSICAL) -> void:
+    raw_amount = p_raw_amount
+    final_amount = p_raw_amount
+    attacker = p_attacker
+    damage_type = p_type
 
 ## For future multiplayer/persistence.
 func to_dict() -> Dictionary:

@@ -7,5 +7,5 @@ func execute(resource: AbilityResource, ctx: AbilityContext) -> void:
     var direction := (flat_aim - ctx.caster.global_position).normalized()
     if direction == Vector3.ZERO:
         direction = -ctx.caster.global_basis.z
-    ctx.caster.movement.apply_impulse(direction, resource.dash_force, false)
+    ctx.caster.commands.emit(DashCommand.new(direction, resource.dash_force, false))
     await get_tree().create_timer(dash_duration).timeout

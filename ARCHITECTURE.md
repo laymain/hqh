@@ -82,19 +82,35 @@ To replicate advanced mechanics like **Perks** and **Armor Plates**:
 
 ## 4. Standardized Folder Structure
 
+The project is organized by **feature domain** rather than by file type. Each top-level folder groups scripts, scenes, and resources that belong to the same concern.
+
 ```text
 res://
-├── resources/
-│   ├── stats/          # .tres files for Warrior, Slime, etc.
-│   ├── abilities/      # .tres files for Slash, Heal, etc.
-│   └── status_effects/ # .tres files for Bleed, Burn, etc.
-├── scenes/
-│   ├── components/     # Component scenes (Health, Defense, Combat)
-│   └── actors/         # Combined actor scenes (Character + Components)
-└── scripts/
-    ├── core/           # damage_info.gd, enums.gd
-    ├── components/     # health_component.gd, defense_component.gd, etc.
-    └── systems/        # Global managers (perk_handler.gd)
+├── actors/                     # Character definitions
+│   ├── base/                   # character.gd, character_visuals.gd
+│   ├── enemies/                # enemy.tscn
+│   └── player/                 # player.tscn
+├── assets/                     # Art, models, UI textures (non-code)
+│   ├── character/
+│   ├── dungeon/
+│   ├── ui/
+│   ├── vfx/
+│   └── weapon/
+├── shaders/                    # .gdshader / .gdshaderinc files
+├── shared/                     # Cross-cutting utilities & UI
+│   ├── core/                   # enums.gd
+│   └── ui/                     # floating_text, hud/
+├── systems/                    # Game systems (one subfolder per system)
+│   ├── abilities/              # ability_component, ability_resource, handlers (melee/, dash/)
+│   ├── camera/                 # following_camera, free_look_camera
+│   ├── commands/               # character_commands, attack_command, dash_command
+│   ├── controller/             # character_controller, input_character_controller
+│   ├── damage/                 # attack_component, defense_component, health_component, damage_info
+│   ├── movement/               # movement_component
+│   └── stats/                  # character_stats.gd, .tres stat profiles
+└── world/                      # Level/dungeon infrastructure
+    ├── dungeon/                # environment.gd, map_manager.gd
+    └── maps/                   # .json map data files
 ```
 
 ---
@@ -158,7 +174,43 @@ The `DefenseComponent` is itself a series of interceptors. Each defense layer (B
 
 ---
 
-## 8. Code Principles & Best Practices
+## 8. The Command Pattern (Intent Dispatch)
+
+To decouple **intent** (what a character wants to do) from **execution** (how it happens), the architecture uses a lightweight **Command Pattern** built around `CharacterCommands`.
+
+### **A. How It Works**
+Each `Character` owns a `CharacterCommands` instance — a simple `RefCounted` signal bus with a single `dispatched(cmd: Object)` signal. When a system (e.g., an `AbilityHandler`) decides that something should happen, it creates a typed command object and emits it through this bus.
+
+```gdscript
+# Inside an AbilityHandler
+ctx.caster.commands.emit(AttackCommand.new(targets, multiplier, damage_type, knockback))
+```
+
+Any component that cares about that command type listens on the bus and reacts:
+
+```gdscript
+# attack_component.gd
+func setup(character: Character) -> void:
+    _character = character
+    character.commands.dispatched.connect(_on_command)
+
+func _on_command(cmd: Object) -> void:
+    if not cmd is AttackCommand: return
+    # ... process the attack
+```
+
+### **B. Current Commands**
+*   **`AttackCommand`**: Carries `targets`, `multiplier`, `damage_type`, and `knockback_force`. Consumed by `AttackComponent` to roll damage and apply hits.
+*   **`DashCommand`**: Carries `direction`, `force`, and `reset_velocity`. Consumed by `MovementComponent` to apply an impulse.
+
+### **C. Why This Pattern**
+*   **Decoupled Abilities:** Ability handlers don't need references to `AttackComponent` or `MovementComponent`. They only need the character's command bus.
+*   **Single Responsibility:** Each component only processes the commands it understands and ignores the rest.
+*   **Extensibility:** Adding a new command type (e.g., `SpawnProjectileCommand`) requires no changes to existing components — only a new consumer.
+
+---
+
+## 9. Code Principles & Best Practices
 
 To ensure long-term maintainability for a solo developer, all contributors (human or AI) must adhere to these standards:
 
@@ -199,7 +251,7 @@ To ensure long-term maintainability for a solo developer, all contributors (huma
 
 ---
 
-## 9. Naming Conventions
+## 10. Naming Conventions
 
 All GDScript code must follow the official [Godot GDScript style guide](https://docs.godotengine.org/en/stable/tutorials/scripting/gdscript/gdscript_styleguide.html).
 
@@ -225,7 +277,7 @@ All GDScript code must follow the official [Godot GDScript style guide](https://
 
 ---
 
-## 10. Multiplayer Readiness (Future-Proofing)
+## 11. Multiplayer Readiness (Future-Proofing)
 
 While currently single-player, the architecture is designed to transition to Godot’s high-level multiplayer API without a total rewrite.
 

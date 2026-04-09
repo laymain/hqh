@@ -1,4 +1,4 @@
-class_name Enums extends Node
+class_name Enums
 
 enum DamageType {
     PHYSICAL,

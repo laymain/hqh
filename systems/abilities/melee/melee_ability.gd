@@ -26,11 +26,19 @@ func _on_attack_frame() -> void:
     shape_query.transform = _hitbox.global_transform
     shape_query.collision_mask = (2 | 4) & ~_current_ctx.caster.collision_layer
     shape_query.exclude = [_current_ctx.caster.get_rid()]
+
+    var targets: Array[Character] = []
     for result in get_world_3d().direct_space_state.intersect_shape(shape_query):
         var body := result["collider"] as Node3D
         if body is Character:
-            var multiplier := _current_resource.get_multiplier(_current_ctx.combo_index)
-            var info := _current_ctx.caster.attack.roll_damage(multiplier, Enums.DamageType.PHYSICAL)
-            info.knockback_force = _current_resource.get_knockback_force(_current_ctx.combo_index)
-            info.knockback_direction = (_current_ctx.caster.global_position - body.global_position).normalized() * -1.0
-            body.handle_hit(info)
+            targets.append(body)
+
+    if targets.is_empty():
+        return
+
+    _current_ctx.caster.commands.emit(AttackCommand.new(
+        targets,
+        _current_resource.get_multiplier(_current_ctx.combo_index),
+        Enums.DamageType.PHYSICAL,
+        _current_resource.get_knockback_force(_current_ctx.combo_index)
+    ))

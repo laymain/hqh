@@ -5,6 +5,13 @@ var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 func setup(character: Character) -> void:
     _character = character
+    character.commands.dispatched.connect(_on_command)
+
+
+func _on_command(cmd: Object) -> void:
+    if cmd is DashCommand:
+        apply_impulse(cmd.direction, cmd.force, cmd.reset_velocity)
+
 
 func _physics_process(delta: float) -> void:
     if not _character: return
